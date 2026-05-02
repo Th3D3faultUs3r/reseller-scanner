@@ -358,7 +358,7 @@
 <div class="app">
 
   <header>
-    <h1>📦 Reseller Scanner</h1>
+    <h1>ð¦ Reseller Scanner</h1>
     <div class="health-dot" id="healthDot" title="API status"></div>
   </header>
 
@@ -366,7 +366,7 @@
   <div class="preview-wrap" id="previewWrap">
     <img id="preview" alt="Item preview">
     <div class="preview-placeholder" id="placeholder">
-      <span class="icon">📷</span>
+      <span class="icon">ð·</span>
       <span>Tap scan to take a photo</span>
     </div>
     <span class="barcode-badge" id="barcodeBadge">Barcode detected</span>
@@ -379,7 +379,7 @@
   <div class="controls">
 
     <button class="btn-scan" id="btnScan">
-      <span>📷</span> Scan Item
+      <span>ð·</span> Scan Item
     </button>
 
     <div class="cost-row">
@@ -401,7 +401,7 @@
   <!-- Loader -->
   <div class="loader" id="loader">
     <div class="spinner"></div>
-    <span id="loaderMsg">Identifying item…</span>
+    <span id="loaderMsg">Identifying itemâ¦</span>
   </div>
 
   <!-- Results -->
@@ -414,10 +414,10 @@
   let selectedFile = null;
   let selectedPlatform = 'ebay';
   const loaderMessages = [
-    'Checking barcode…',
-    'Identifying with AI…',
-    'Looking up prices…',
-    'Calculating margin…',
+    'Checking barcodeâ¦',
+    'Identifying with AIâ¦',
+    'Looking up pricesâ¦',
+    'Calculating marginâ¦',
   ];
   let loaderInterval = null;
 
@@ -427,7 +427,7 @@
   const placeholder = document.getElementById('placeholder');
   const barcodeBadge = document.getElementById('barcodeBadge');
   const btnScan     = document.getElementById('btnScan');
-  const btnSubmit   = document.getElementById('btnSubmit');
+  const btnSubmit   = document.getEm¢btnSubmit');
   const costInput   = document.getElementById('costInput');
   const loader      = document.getElementById('loader');
   const loaderMsg   = document.getElementById('loaderMsg');
@@ -458,21 +458,48 @@
     selectedPlatform = btn.dataset.platform;
   });
 
-  // ---- Scan button → open camera ----
+  // ---- Scan button â open camera ----
   btnScan.addEventListener('click', () => fileInput.click());
 
-  fileInput.addEventListener('change', () => {
+  // ---- Image compression (resize to max 1024px, JPEG 0.82) ----
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          resolve(new File([blob], 'scan.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file); // fallback: use original if compression fails
+      img.src = url;
+    });
+  }
+
+  fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
-    selectedFile = file;
     barcodeBadge.classList.remove('visible');
 
-    const url = URL.createObjectURL(file);
-    preview.src = url;
+    // Show preview immediately from original file
+    const previewUrl = URL.createObjectURL(file);
+    preview.src = previewUrl;
     preview.classList.add('visible');
     placeholder.style.display = 'none';
-    btnSubmit.disabled = false;
     results.innerHTML = '';
+
+    // Compress before upload (target ~300-500KB vs raw 3-10MB)
+    selectedFile = await compressImage(file, 1024, 0.82);
+    btnSubmit.disabled = false;
   });
 
   // ---- Submit ----
@@ -494,7 +521,7 @@
       if (!resp.ok) throw new Error(data.error || 'Server error');
       renderResults(data);
     } catch (err) {
-      results.innerHTML = `<div class="error-msg">⚠️ ${err.message}</div>`;
+      results.innerHTML = `<div class="error-msg">â ï¸ ${err.message}</div>`;
     } finally {
       setLoading(false);
     }
@@ -537,7 +564,7 @@
         body.innerHTML = `<p class="id-notes" style="color:var(--danger)">${id.error}</p>`;
       } else {
         body.innerHTML = `
-          <p class="id-title">${esc(id.title || '—')}</p>
+          <p class="id-title">${esc(id.title || 'â')}</p>
           <div class="id-meta">
             ${id.brand    ? `<span class="tag">${esc(id.brand)}</span>` : ''}
             ${id.category ? `<span class="tag">${esc(id.category)}</span>` : ''}
@@ -633,7 +660,7 @@
   }
 
   function priceCell(label, val, highlight) {
-    const display = val != null ? `$${parseFloat(val).toFixed(2)}` : '—';
+    const display = val != null ? `$${parseFloat(val).toFixed(2)}` : 'â';
     return `<div class="price-cell">
       <div class="price-label">${esc(label)}</div>
       <div class="price-value ${highlight && val ? 'green' : ''}">${display}</div>
@@ -641,7 +668,7 @@
   }
 
   function rankCell(label, val) {
-    const display = val != null ? '#' + val.toLocaleString() : '—';
+    const display = val != null ? '#' + val.toLocaleString() : 'â';
     return `<div class="price-cell">
       <div class="price-label">${esc(label)}</div>
       <div class="price-value">${display}</div>
