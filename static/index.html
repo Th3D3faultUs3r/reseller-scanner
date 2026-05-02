@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Reseller Scanner</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #00c896;
+      --accent-dim: #00906e;
+      --danger: #ff4d4d;
+      --warn: #f5a623;
+      --text: #f0f0f0;
+      --text-muted: #888;
+      --radius: 14px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top, 12px) 16px env(safe-area-inset-bottom, 24px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ---- Header ---- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+    }
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--accent);
+    }
+    .health-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+    .health-dot.ok   { background: var(--accent); }
+    .health-dot.warn { background: var(--warn); }
+    .health-dot.err  { background: var(--danger); }
+
+    /* ---- Preview area ---- */
+    .preview-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    .preview-wrap img.visible { display: block; }
+    .preview-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .preview-placeholder .icon { font-size: 3rem; }
+
+    .barcode-badge {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: var(--accent);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      display: none;
+    }
+    .barcode-badge.visible { display: block; }
+
+    /* ---- Controls ---- */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-scan {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #000;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-scan:active { transform: scale(0.97); }
+    .btn-scan:disabled { background: var(--border); color: var(--text-muted); cursor: default; }
+
+    /* hidden file input */
+    #fileInput { display: none; }
+
+    .cost-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cost-row label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .cost-row input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .cost-row input:focus { border-color: var(--accent); }
+
+    .platform-row {
+      display: flex;
+      gap: 6px;
+    }
+    .platform-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .platform-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,200,150,0.08);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-submit:hover { background: var(--border); }
+    .btn-submit:disabled { opacity: 0.4; cursor: default; }
+
+    /* ---- Loader ---- */
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 32px 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .loader.visible { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Results ---- */
+    .results { display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .badge-green  { background: rgba(0,200,150,0.15); color: var(--accent); }
+    .badge-yellow { background: rgba(245,166,35,0.15); color: var(--warn); }
+    .badge-red    { background: rgba(255,77,77,0.15);  color: var(--danger); }
+
+    .card-body { padding: 14px; }
+
+    .id-title {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .id-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .tag {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .id-notes {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .price-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .price-cell {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .price-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; }
+    .price-value { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .price-value.green { color: var(--accent); }
+
+    .margin-big {
+      text-align: center;
+      padding: 16px 0 8px;
+    }
+    .verdict {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .verdict.buy  { color: var(--accent); }
+    .verdict.pass { color: var(--danger); }
+    .margin-detail {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .md-cell {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .md-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 3px; }
+    .md-value { font-size: 0.95rem; font-weight: 700; }
+
+    .web-answer {
+      font-size: 0.84rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .web-sources {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .web-sources a {
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .error-msg {
+      background: rgba(255,77,77,0.08);
+      border: 1px solid rgba(255,77,77,0.25);
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 0.85rem;
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>📦 Reseller Scanner</h1>
+    <div class="health-dot" id="healthDot" title="API status"></div>
+  </header>
+
+  <!-- Camera / Preview -->
+  <div class="preview-wrap" id="previewWrap">
+    <img id="preview" alt="Item preview">
+    <div class="preview-placeholder" id="placeholder">
+      <span class="icon">📷</span>
+      <span>Tap scan to take a photo</span>
+    </div>
+    <span class="barcode-badge" id="barcodeBadge">Barcode detected</span>
+  </div>
+
+  <!-- Hidden file input -->
+  <input type="file" id="fileInput" accept="image/*" capture="environment">
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <button class="btn-scan" id="btnScan">
+      <span>📷</span> Scan Item
+    </button>
+
+    <div class="cost-row">
+      <label for="costInput">Paid $</label>
+      <input type="number" id="costInput" placeholder="0.00" min="0" step="0.25">
+    </div>
+
+    <div class="platform-row" id="platformRow">
+      <button class="platform-btn active" data-platform="ebay">eBay</button>
+      <button class="platform-btn" data-platform="amazon">Amazon</button>
+      <button class="platform-btn" data-platform="mercari">Mercari</button>
+      <button class="platform-btn" data-platform="poshmark">Poshmark</button>
+    </div>
+
+    <button class="btn-submit" id="btnSubmit" disabled>Analyze Item</button>
+
+  </div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <span id="loaderMsg">Identifying item…</span>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+  // ---- State ----
+  let selectedFile = null;
+  let selectedPlatform = 'ebay';
+  const loaderMessages = [
+    'Checking barcode…',
+    'Identifying with AI…',
+    'Looking up prices…',
+    'Calculating margin…',
+  ];
+  let loaderInterval = null;
+
+  // ---- Elements ----
+  const fileInput   = document.getElementById('fileInput');
+  const preview     = document.getElementById('preview');
+  const placeholder = document.getElementById('placeholder');
+  const barcodeBadge = document.getElementById('barcodeBadge');
+  const btnScan     = document.getElementById('btnScan');
+  const btnSubmit   = document.getElementById('btnSubmit');
+  const costInput   = document.getElementById('costInput');
+  const loader      = document.getElementById('loader');
+  const loaderMsg   = document.getElementById('loaderMsg');
+  const results     = document.getElementById('results');
+  const healthDot   = document.getElementById('healthDot');
+
+  // ---- Health check ----
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      const allOk = d.anthropic === 'configured';
+      const anyMissing = d.keepa !== 'configured' || d.linkup !== 'configured';
+      healthDot.className = 'health-dot ' + (allOk ? (anyMissing ? 'warn' : 'ok') : 'err');
+      healthDot.title = `Anthropic: ${d.anthropic} | Keepa: ${d.keepa} | Linkup: ${d.linkup}`;
+    } catch {
+      healthDot.className = 'health-dot err';
+    }
+  }
+  checkHealth();
+
+  // ---- Platform selector ----
+  document.getElementById('platformRow').addEventListener('click', e => {
+    const btn = e.target.closest('.platform-btn');
+    if (!btn) return;
+    document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPlatform = btn.dataset.platform;
+  });
+
+  // ---- Scan button → open camera ----
+  btnScan.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    selectedFile = file;
+    barcodeBadge.classList.remove('visible');
+
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.classList.add('visible');
+    placeholder.style.display = 'none';
+    btnSubmit.disabled = false;
+    results.innerHTML = '';
+  });
+
+  // ---- Submit ----
+  btnSubmit.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    setLoading(true);
+    results.innerHTML = '';
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    const cost = parseFloat(costInput.value);
+    if (!isNaN(cost) && cost > 0) formData.append('cost', cost);
+    formData.append('platform', selectedPlatform);
+
+    try {
+      const resp = await fetch('/scan', { method: 'POST', body: formData });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Server error');
+      renderResults(data);
+    } catch (err) {
+      results.innerHTML = `<div class="error-msg">⚠️ ${err.message}</div>`;
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ---- Loader ----
+  function setLoading(on) {
+    loader.classList.toggle('visible', on);
+    btnSubmit.disabled = on;
+    btnScan.disabled = on;
+    if (on) {
+      let i = 0;
+      loaderMsg.textContent = loaderMessages[0];
+      loaderInterval = setInterval(() => {
+        i = (i + 1) % loaderMessages.length;
+        loaderMsg.textContent = loaderMessages[i];
+      }, 1800);
+    } else {
+      clearInterval(loaderInterval);
+    }
+  }
+
+  // ---- Render ----
+  function renderResults(data) {
+    const frag = document.createDocumentFragment();
+
+    // Barcode badge
+    if (data.barcode) {
+      barcodeBadge.textContent = `Barcode: ${data.barcode}`;
+      barcodeBadge.classList.add('visible');
+    }
+
+    // -- Identification card --
+    const id = data.identification || {};
+    if (id.title || id.error) {
+      const card = makeCard('Item Identification', confidenceBadge(id.confidence));
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      if (id.error) {
+        body.innerHTML = `<p class="id-notes" style="color:var(--danger)">${id.error}</p>`;
+      } else {
+        body.innerHTML = `
+          <p class="id-title">${esc(id.title || '—')}</p>
+          <div class="id-meta">
+            ${id.brand    ? `<span class="tag">${esc(id.brand)}</span>` : ''}
+            ${id.category ? `<span class="tag">${esc(id.category)}</span>` : ''}
+            ${id.condition ? `<span class="tag">${esc(id.condition)}</span>` : ''}
+            ${id.source === 'barcode' ? `<span class="tag" style="color:var(--accent);border-color:var(--accent)">Barcode ID</span>` : `<span class="tag">AI Vision</span>`}
+          </div>
+          ${id.notes ? `<p class="id-notes">${esc(id.notes)}</p>` : ''}
+        `;
+      }
+      card.append(body);
+      frag.append(card);
+    }
+
+    // -- Amazon / Keepa card --
+    const amazon = (data.pricing || {}).amazon;
+    if (amazon && !amazon.error) {
+      const card = makeCard('Amazon Pricing (Keepa)');
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.innerHTML = `
+        <div class="price-grid">
+          ${priceCell('Current Price', amazon.amazon_price_current || amazon.marketplace_new_current)}
+          ${priceCell('90-Day Avg', amazon.amazon_price_avg90 || amazon.marketplace_new_avg90, true)}
+          ${rankCell('Sales Rank', amazon.sales_rank_current)}
+          ${priceCell('Best Estimate', amazon.best_price_estimate, true)}
+        </div>
+      `;
+      card.append(body);
+      frag.append(card);
+    }
+
+    // -- Margin card --
+    const margin = data.margin;
+    if (margin) {
+      const isBuy = margin.verdict === 'BUY';
+      const card = makeCard('Profit Calculator');
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.innerHTML = `
+        <div class="margin-big">
+          <div class="verdict ${isBuy ? 'buy' : 'pass'}">${margin.verdict}</div>
+        </div>
+        <div class="margin-detail">
+          ${mdCell('Paid', '$' + margin.cost.toFixed(2))}
+          ${mdCell('Sell For', '$' + margin.sell_price.toFixed(2))}
+          ${mdCell('Net Profit', '$' + margin.net_profit.toFixed(2), isBuy ? 'var(--accent)' : 'var(--danger)')}
+          ${mdCell('Fees', '$' + margin.fees.toFixed(2))}
+          ${mdCell('Shipping est.', '$' + margin.estimated_shipping.toFixed(2))}
+          ${mdCell('ROI', margin.roi_percent + '%', isBuy ? 'var(--accent)' : null)}
+        </div>
+      `;
+      card.append(body);
+      frag.append(card);
+    }
+
+    // -- Web search card --
+    const web = (data.pricing || {}).web;
+    if (web && !web.error && web.answer) {
+      const card = makeCard('Web Price Research (Linkup)');
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.innerHTML = `<p class="web-answer">${esc(web.answer)}</p>`;
+      if (web.sources && web.sources.length) {
+        const src = document.createElement('div');
+        src.className = 'web-sources';
+        web.sources.forEach(url => {
+          if (url) src.innerHTML += `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`;
+        });
+        body.append(src);
+      }
+      card.append(body);
+      frag.append(card);
+    }
+
+    results.appendChild(frag);
+  }
+
+  // ---- Helpers ----
+  function makeCard(title, badge) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `<span class="card-title">${esc(title)}</span>${badge || ''}`;
+    card.append(header);
+    return card;
+  }
+
+  function confidenceBadge(conf) {
+    if (!conf) return '';
+    const cls = conf === 'High' ? 'badge-green' : conf === 'Medium' ? 'badge-yellow' : 'badge-red';
+    return `<span class="badge ${cls}">${conf}</span>`;
+  }
+
+  function priceCell(label, val, highlight) {
+    const display = val != null ? `$${parseFloat(val).toFixed(2)}` : '—';
+    return `<div class="price-cell">
+      <div class="price-label">${esc(label)}</div>
+      <div class="price-value ${highlight && val ? 'green' : ''}">${display}</div>
+    </div>`;
+  }
+
+  function rankCell(label, val) {
+    const display = val != null ? '#' + val.toLocaleString() : '—';
+    return `<div class="price-cell">
+      <div class="price-label">${esc(label)}</div>
+      <div class="price-value">${display}</div>
+    </div>`;
+  }
+
+  function mdCell(label, val, color) {
+    return `<div class="md-cell">
+      <div class="md-label">${esc(label)}</div>
+      <div class="md-value" ${color ? `style="color:${color}"` : ''}>${esc(val)}</div>
+    </div>`;
+  }
+
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  // ---- Service worker ----
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
