@@ -81,18 +81,27 @@ def identify_with_claude(image_bytes, content_type='image/jpeg'):
     if not ANTHROPIC_API_KEY:
         return {'error': 'ANTHROPIC_API_KEY not configured', 'source': 'claude_vision'}
 
-    # Normalise media type
-    media_type = content_type if content_type.startswith('image/') else 'image/jpeg'
-    if media_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
+    # Resize to max 1024px before sending â phone photos (3-10MB) are too large
+    # and cause timeouts when uploading to Anthropic's API.
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img.thumbnail((1024, 1024), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=82)
+        image_bytes = buf.getvalue()
         media_type = 'image/jpeg'
+    except Exception:
+        media_type = content_type if content_type.startswith('image/') else 'image/jpeg'
+        if media_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
+            media_type = 'image/jpeg'
 
     b64 = base64.standard_b64encode(image_bytes).decode('utf-8')
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, timeout=45.0)
 
     prompt = (
         'You are an expert resale item identifier. Examine this photo carefully and respond '
-        'with JSON only — no other text.\n\n'
+        'with JSON only â no other text.\n\n'
         'Return exactly this structure:\n'
         '{\n'
         '  "title": "full product name including model/size/quantity",\n'
@@ -286,7 +295,7 @@ def health():
         'anthropic':  'configured' if ANTHROPIC_API_KEY else 'not configured',
         'keepa':      'configured' if KEEPA_API_KEY else 'not configured',
         'linkup':     'configured' if LINKUP_API_KEY else 'not configured',
-        'pyzbar':     'available'  if PYZBAR_AVAILABLE else 'not available — install pyzbar + libzbar0',
+        'pyzbar':     'available'  if PYZBAR_AVAILABLE else 'not available â install pyzbar + libzbar0',
     })
 
 
