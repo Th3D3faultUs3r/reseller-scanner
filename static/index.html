@@ -86,8 +86,8 @@ h1{font-size:20px;font-weight:700;margin-bottom:2px}
 <script>
 var imgB64="",upc="";
 function triggerCamera(){document.getElementById("fileInput").click();}
-document.getElementById("fileInput").addEventListener("change",function(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var raw=ev.target.result;compressImage(raw,function(c){imgB64=c;var p=document.getElementById("preview");p.src=c;p.style.display="block";tryBarcode(c);doScan();});};reader.readAsDataURL(file);});
-function compressImage(dataUrl,cb){var img=new Image();img.onload=function(){var max=1024,w=img.width,h=img.height;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);cb(c.toDataURL("image/jpeg",0.8));};img.src=dataUrl;}
+document.getElementById("fileInput").addEventListener("change",function(e){var file=e.target.files[0];if(!file)return;var objectUrl=URL.createObjectURL(file);compressImage(objectUrl,function(c){URL.revokeObjectURL(objectUrl);imgB64=c;var p=document.getElementById("preview");p.src=c;p.style.display="block";tryBarcode(c);doScan();});});
+function compressImage(dataUrl,cb){var img=new Image();img.onerror=function(){cb('');};img.onload=function(){var max=1024,w=img.width,h=img.height;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);cb(c.toDataURL("image/jpeg",0.8));};img.src=dataUrl;}
 function tryBarcode(d){if(typeof Quagga==="undefined")return;Quagga.decodeSingle({decoder:{readers:["ean_reader","upc_reader","upc_e_reader","code_128_reader"]},locate:true,src:d},function(r){if(r&&r.codeResult)upc=r.codeResult.code;});}
 function setLoading(t){document.getElementById("loading").style.display="block";document.getElementById("results").style.display="none";document.getElementById("loadingText").textContent=t||"Identifying item...";document.getElementById("scanBtn").disabled=true;}
 function doScan(){
