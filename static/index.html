@@ -1,668 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f0f0f">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Reseller Scanner</title>
-  <link rel="manifest" href="/static/manifest.json">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:      #0f0f0f;
-      --surface: #1a1a1a;
-      --surface2: #222;
-      --border:  #2e2e2e;
-      --buy:     #00e676;
-      --pass:    #ff1744;
-      --thin:    #ffab00;
-      --text:    #ffffff;
-      --muted:   #777;
-      --radius:  16px;
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
-
-    .app {
-      max-width: 480px;
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: env(safe-area-inset-top, 16px) 16px env(safe-area-inset-bottom, 32px);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* ---- Top bar ---- */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 0 2px;
-    }
-    .topbar-title {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--muted);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-    }
-    .health-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--border);
-    }
-    .health-dot.ok   { background: var(--buy); }
-    .health-dot.warn { background: var(--thin); }
-    .health-dot.err  { background: var(--pass); }
-
-    /* ---- Cost input ---- */
-    .cost-row {
-      display: flex;
-      align-items: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 0 18px;
-      height: 58px;
-      gap: 6px;
-      transition: border-color 0.2s;
-    }
-    .cost-row:focus-within { border-color: #444; }
-    .cost-label {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--muted);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .cost-row input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      font-size: 1.5rem;
-      font-weight: 700;
-      outline: none;
-      min-width: 0;
-      -webkit-appearance: none;
-    }
-    .cost-row input::placeholder { color: #333; }
-
-    /* ---- Platform row ---- */
-    .platform-row {
-      display: flex;
-      gap: 6px;
-    }
-    .platform-btn {
-      flex: 1;
-      padding: 9px 2px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .platform-btn.active {
-      border-color: var(--buy);
-      color: var(--buy);
-      background: rgba(0,230,118,0.07);
-    }
-
-    /* ---- Preview strip ---- */
-    .preview-strip {
-      position: relative;
-      width: 100%;
-      height: 120px;
-      border-radius: var(--radius);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      overflow: hidden;
-      display: none;
-    }
-    .preview-strip.visible { display: block; }
-    .preview-strip img { width: 100%; height: 100%; object-fit: cover; }
-    .barcode-tag {
-      position: absolute;
-      top: 8px; left: 8px;
-      background: var(--buy);
-      color: #000;
-      font-size: 0.62rem;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 20px;
-      display: none;
-    }
-    .barcode-tag.visible { display: block; }
-
-    /* ---- Scan button ---- */
-    #fileInput { display: none; }
-
-    .btn-scan {
-      width: 100%;
-      height: 66px;
-      background: var(--buy);
-      color: #000;
-      font-size: 1.15rem;
-      font-weight: 900;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      letter-spacing: 0.8px;
-      transition: transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-scan:active { transform: scale(0.97); }
-    .btn-scan:disabled { opacity: 0.3; cursor: default; }
-
-    /* ---- Loader ---- */
-    .loader {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      padding: 40px 0 20px;
-    }
-    .loader.visible { display: flex; }
-    .spinner {
-      width: 46px; height: 46px;
-      border: 3px solid var(--border);
-      border-top-color: var(--buy);
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loader-msg { font-size: 0.9rem; color: var(--muted); }
-
-    /* ======== RESULTS ======== */
-    .results { display: flex; flex-direction: column; gap: 10px; }
-
-    /* ---- VERDICT BANNER ---- */
-    .verdict-banner {
-      border-radius: var(--radius);
-      padding: 20px 20px 18px;
-    }
-    .verdict-banner.buy  { background: rgba(0,230,118,0.1);  border: 1.5px solid rgba(0,230,118,0.35); }
-    .verdict-banner.pass { background: rgba(255,23,68,0.1);  border: 1.5px solid rgba(255,23,68,0.35); }
-    .verdict-banner.thin { background: rgba(255,171,0,0.1);  border: 1.5px solid rgba(255,171,0,0.35); }
-    .verdict-banner.info { background: var(--surface);       border: 1px solid var(--border); }
-
-    .verdict-word {
-      font-size: 3rem;
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -1.5px;
-    }
-    .verdict-word.buy  { color: var(--buy); }
-    .verdict-word.pass { color: var(--pass); }
-    .verdict-word.thin { color: var(--thin); }
-    .verdict-word.info { color: var(--muted); font-size: 1.8rem; }
-
-    .verdict-sub {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .verdict-item {
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-    .verdict-name {
-      font-size: 1rem;
-      font-weight: 700;
-      line-height: 1.35;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .verdict-brand {
-      margin-top: 3px;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    /* ---- Big numbers ---- */
-    .numbers-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .num-cell {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 16px;
-    }
-    .num-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .num-value {
-      font-size: 1.9rem;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.5px;
-    }
-    .num-value.green  { color: var(--buy); }
-    .num-value.red    { color: var(--pass); }
-    .num-value.yellow { color: var(--thin); }
-
-    /* ---- Divider ---- */
-    .section-divider {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 2px 0;
-    }
-    .section-divider::before,
-    .section-divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-    .section-divider span {
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--border);
-    }
-
-    /* ---- Detail cards ---- */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .card-header {
-      padding: 11px 16px;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-    }
-    .card-body { padding: 12px 16px; }
-
-    /* Breakdown rows */
-    .brow {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 7px 0;
-    }
-    .brow + .brow { border-top: 1px solid var(--border); }
-    .brow-label { font-size: 0.83rem; color: var(--muted); }
-    .brow-value { font-size: 0.92rem; font-weight: 700; }
-    .brow.total .brow-label { color: var(--text); font-size: 0.9rem; font-weight: 600; }
-    .brow.total .brow-value { font-size: 1.05rem; }
-
-    /* Amazon grid */
-    .ag { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .ac {
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-    .ac-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; }
-    .ac-value  { font-size: 1.05rem; font-weight: 700; }
-    .ac-value.green { color: var(--buy); }
-
-    /* Web snippet */
-    .web-text {
-      font-size: 0.84rem;
-      line-height: 1.6;
-      color: #bbb;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .web-sources {
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .web-sources a {
-      font-size: 0.68rem;
-      color: #444;
-      text-decoration: none;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .error-msg {
-      background: rgba(255,23,68,0.08);
-      border: 1px solid rgba(255,23,68,0.25);
-      border-radius: var(--radius);
-      padding: 18px;
-      font-size: 0.88rem;
-      color: var(--pass);
-      text-align: center;
-      line-height: 1.5;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Reseller Scanner</title>
+<link rel="manifest" href="/static/manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:20px;font-weight:700;margin-bottom:2px}
+.sub{font-size:12px;color:#555;margin-bottom:20px}
+.top{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.cost-label{font-size:14px;color:#888;white-space:nowrap}
+.cost-input{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:10px 12px;color:#fff;font-size:16px;width:100px;outline:none}
+.cost-input:focus{border-color:#444}
+.scan-btn{flex:1;background:#2563eb;color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.scan-btn:hover{background:#1d4ed8}
+.scan-btn:disabled{background:#1e2a3a;color:#4a6080;cursor:not-allowed}
+#fileInput{display:none}
+.preview{width:100%;max-height:180px;object-fit:contain;border-radius:10px;margin-bottom:14px;display:none;background:#111}
+.loading{display:none;text-align:center;padding:32px 0}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid #222;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:#666}
+.results{display:none}
+.verdict{border-radius:14px;padding:20px 16px;text-align:center;margin-bottom:14px}
+.verdict.buy{background:#052e16;border:1px solid #16a34a}
+.verdict.pass{background:#2d0707;border:1px solid #dc2626}
+.verdict.maybe{background:#2d1a00;border:1px solid #d97706}
+.verdict-label{font-size:32px;font-weight:800;letter-spacing:1px}
+.verdict.buy .verdict-label{color:#22c55e}
+.verdict.pass .verdict-label{color:#ef4444}
+.verdict.maybe .verdict-label{color:#f59e0b}
+.verdict-sub{font-size:14px;color:#888;margin-top:6px}
+.key-numbers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kn-card{background:#1a1a1a;border-radius:12px;padding:14px;text-align:center}
+.kn-label{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kn-value{font-size:26px;font-weight:700;color:#fff}
+.kn-value.green{color:#22c55e}
+.kn-value.red{color:#ef4444}
+.kn-value.yellow{color:#f59e0b}
+.card{background:#1a1a1a;border-radius:12px;padding:14px;margin-bottom:10px}
+.card-label{font-size:11px;color:#444;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.item-name{font-size:16px;font-weight:600;color:#fff;line-height:1.3}
+.item-brand{font-size:13px;color:#666;margin-top:3px}
+.item-source{font-size:11px;color:#333;margin-top:3px}
+.price-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #222}
+.price-row:last-child{border:none}
+.price-row .pl{font-size:13px;color:#777}
+.price-row .pv{font-size:14px;font-weight:600;color:#fff}
+.price-row .pv.g{color:#22c55e}
+.price-row .pv.r{color:#ef4444}
+.market-text{font-size:13px;color:#888;line-height:1.6}
+.market-link{display:inline-block;margin:6px 6px 0 0;font-size:11px;color:#2563eb;text-decoration:none;background:#0d1a2e;padding:3px 8px;border-radius:6px}
+.reset-btn{width:100%;background:transparent;color:#444;border:1px solid #222;border-radius:10px;padding:12px;font-size:14px;cursor:pointer;margin-top:8px}
+.reset-btn:hover{color:#888;border-color:#333}
+</style>
 </head>
 <body>
-<div class="app">
-
-  <div class="topbar">
-    <span class="topbar-title">Reseller Scanner</span>
-    <div class="health-dot" id="healthDot"></div>
-  </div>
-
-  <!-- Cost — always visible -->
-  <div class="cost-row">
+<div class="wrap">
+  <h1>Reseller Scanner</h1>
+  <p class="sub">Snap an item — get a buy/pass decision instantly</p>
+  <div class="top">
     <span class="cost-label">Paid $</span>
-    <input type="number" id="costInput" placeholder="0.00" min="0" step="0.25" inputmode="decimal">
+    <input class="cost-input" type="number" id="costInput" placeholder="0.00" step="0.01" min="0">
+    <button class="scan-btn" id="scanBtn" onclick="triggerCamera()">Scan Item</button>
   </div>
-
-  <!-- Platform -->
-  <div class="platform-row" id="platformRow">
-    <button class="platform-btn active" data-platform="ebay">eBay</button>
-    <button class="platform-btn" data-platform="amazon">Amazon</button>
-    <button class="platform-btn" data-platform="mercari">Mercari</button>
-    <button class="platform-btn" data-platform="poshmark">Poshmark</button>
-  </div>
-
-  <!-- Preview (shown after photo) -->
-  <div class="preview-strip" id="previewStrip">
-    <img id="preview" alt="">
-    <span class="barcode-tag" id="barcodeBadge"></span>
-  </div>
-
-  <!-- Scan -->
   <input type="file" id="fileInput" accept="image/*" capture="environment">
-  <button class="btn-scan" id="btnScan">SCAN ITEM</button>
-
-  <!-- Loader -->
-  <div class="loader" id="loader">
-    <div class="spinner"></div>
-    <span class="loader-msg" id="loaderMsg">Scanning…</span>
+  <img id="preview" class="preview" alt="">
+  <div class="loading" id="loading"><div class="spinner"></div><div class="loading-text" id="loadingText">Identifying item...</div></div>
+  <div class="results" id="results">
+    <div class="verdict" id="verdictBox"><div class="verdict-label" id="verdictLabel">--</div><div class="verdict-sub" id="verdictSub"></div></div>
+    <div class="key-numbers">
+      <div class="kn-card"><div class="kn-label">Sells For</div><div class="kn-value" id="sellsFor">--</div></div>
+      <div class="kn-card"><div class="kn-label">You Make</div><div class="kn-value" id="youMake">--</div></div>
+    </div>
+    <div class="card" id="itemCard"><div class="card-label">Item</div><div class="item-name" id="itemName">--</div><div class="item-brand" id="itemBrand"></div><div class="item-source" id="itemSource"></div></div>
+    <div class="card" id="breakdownCard" style="display:none"><div class="card-label">Margin Breakdown</div><div id="breakdownRows"></div></div>
+    <div class="card" id="marketCard" style="display:none"><div class="card-label">Market Research</div><div class="market-text" id="marketText"></div><div id="marketLinks"></div></div>
+    <button class="reset-btn" onclick="resetApp()">Scan Another Item</button>
   </div>
-
-  <!-- Results -->
-  <div class="results" id="results"></div>
-
 </div>
 <script>
-  let selectedFile = null;
-  let selectedPlatform = 'ebay';
-  let loaderInterval = null;
-  const loaderMessages = ['Identifying item…', 'Looking up prices…', 'Calculating margin…', 'Almost done…'];
-
-  const fileInput    = document.getElementById('fileInput');
-  const preview      = document.getElementById('preview');
-  const previewStrip = document.getElementById('previewStrip');
-  const barcodeBadge = document.getElementById('barcodeBadge');
-  const btnScan      = document.getElementById('btnScan');
-  const costInput    = document.getElementById('costInput');
-  const loader       = document.getElementById('loader');
-  const loaderMsg    = document.getElementById('loaderMsg');
-  const results      = document.getElementById('results');
-  const healthDot    = document.getElementById('healthDot');
-
-  // Health
-  (async () => {
-    try {
-      const d = await (await fetch('/health')).json();
-      const ok = d.anthropic === 'configured';
-      const partial = d.keepa !== 'configured' || d.linkup !== 'configured';
-      healthDot.className = 'health-dot ' + (ok ? (partial ? 'warn' : 'ok') : 'err');
-      healthDot.title = `Anthropic:${d.anthropic} Keepa:${d.keepa} Linkup:${d.linkup}`;
-    } catch { healthDot.className = 'health-dot err'; }
-  })();
-
-  // Platform
-  document.getElementById('platformRow').addEventListener('click', e => {
-    const b = e.target.closest('.platform-btn');
-    if (!b) return;
-    document.querySelectorAll('.platform-btn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    selectedPlatform = b.dataset.platform;
-  });
-
-  // Compress
-  function compressImage(file, maxDim, quality) {
-    return new Promise(resolve => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let { width: w, height: h } = img;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        c.toBlob(blob => resolve(new File([blob], 'scan.jpg', { type: 'image/jpeg' })), 'image/jpeg', quality);
-      };
-      img.onerror = () => resolve(file);
-      img.src = url;
-    });
-  }
-
-  btnScan.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    barcodeBadge.classList.remove('visible');
-    preview.src = URL.createObjectURL(file);
-    previewStrip.classList.add('visible');
-    results.innerHTML = '';
-    selectedFile = await compressImage(file, 1024, 0.82);
-    doScan();
-  });
-
-  async function doScan() {
-    if (!selectedFile) return;
-    setLoading(true);
-    results.innerHTML = '';
-    const fd = new FormData();
-    fd.append('image', selectedFile);
-    const cost = parseFloat(costInput.value);
-    if (!isNaN(cost) && cost > 0) fd.append('cost', cost);
-    fd.append('platform', selectedPlatform);
-    try {
-      const resp = await fetch('/scan', { method: 'POST', body: fd });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Server error');
-      render(data);
-    } catch (err) {
-      results.innerHTML = `<div class="error-msg">⚠️ ${esc(err.message)}<br><small style="color:var(--muted);margin-top:6px;display:block">Try again or check your connection</small></div>`;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function setLoading(on) {
-    loader.classList.toggle('visible', on);
-    btnScan.disabled = on;
-    if (on) {
-      let i = 0; loaderMsg.textContent = loaderMessages[0];
-      loaderInterval = setInterval(() => { loaderMsg.textContent = loaderMessages[++i % loaderMessages.length]; }, 1600);
-    } else {
-      clearInterval(loaderInterval);
-    }
-  }
-
-  function render(data) {
-    const frag = document.createDocumentFragment();
-    const id     = data.identification || {};
-    const margin = data.margin;
-    const amazon = (data.pricing || {}).amazon;
-    const web    = (data.pricing || {}).web;
-
-    if (data.barcode) {
-      barcodeBadge.textContent = data.barcode;
-      barcodeBadge.classList.add('visible');
-    }
-
-    // Determine verdict
-    let vc = 'info', vt = 'SCAN', vs = 'enter a cost to see verdict';
-    let sellPrice = null, netProfit = null, roi = null;
-
-    if (margin) {
-      netProfit = margin.net_profit;
-      sellPrice = margin.sell_price;
-      roi = margin.roi_percent;
-      if (netProfit > 5 && roi > 30)      { vc = 'buy';  vt = 'BUY';          vs = `${roi}% ROI · sell on ${margin.platform}`; }
-      else if (netProfit > 0)             { vc = 'thin'; vt = 'THIN MARGIN';   vs = `only +$${netProfit.toFixed(2)} · ${roi}% ROI`; }
-      else                                { vc = 'pass'; vt = 'PASS';          vs = `loses $${Math.abs(netProfit).toFixed(2)} after fees`; }
-    } else if (amazon && amazon.best_price_estimate) {
-      sellPrice = amazon.best_price_estimate;
-      vc = 'info'; vt = 'PRICED'; vs = `enter cost to see profit`;
-    }
-
-    // ── VERDICT BANNER ──
-    const banner = el('div', `verdict-banner ${vc}`);
-    banner.innerHTML = `
-      <div class="verdict-word ${vc}">${vt}</div>
-      <div class="verdict-sub">${esc(vs)}</div>
-      ${(id.title || id.brand) ? `<div class="verdict-item">
-        ${id.title ? `<div class="verdict-name">${esc(id.title)}</div>` : ''}
-        ${id.brand && id.brand !== 'Unknown' ? `<div class="verdict-brand">${esc(id.brand)}</div>` : ''}
-      </div>` : ''}
-    `;
-    frag.appendChild(banner);
-
-    // ── BIG NUMBERS ──
-    if (sellPrice !== null || netProfit !== null) {
-      const row = el('div', 'numbers-row');
-
-      const c1 = el('div', 'num-cell');
-      c1.innerHTML = `<div class="num-label">Sell For</div><div class="num-value">${sellPrice != null ? '$' + sellPrice.toFixed(2) : '—'}</div>`;
-
-      const c2 = el('div', 'num-cell');
-      const pcolor = netProfit == null ? '' : netProfit > 5 ? 'green' : netProfit > 0 ? 'yellow' : 'red';
-      const ptext  = netProfit != null ? (netProfit >= 0 ? '+' : '') + '$' + Math.abs(netProfit).toFixed(2) : '—';
-      c2.innerHTML = `<div class="num-label">You Make</div><div class="num-value ${pcolor}">${ptext}</div>`;
-
-      row.append(c1, c2);
-      frag.appendChild(row);
-    }
-
-    // ── DIVIDER ──
-    const div = el('div', 'section-divider');
-    div.innerHTML = '<span>details</span>';
-    frag.appendChild(div);
-
-    // ── BREAKDOWN ──
-    if (margin) {
-      const card = makeCard('Profit Breakdown');
-      const body = el('div', 'card-body');
-      [
-        ['Sell price',               `$${margin.sell_price.toFixed(2)}`,        ''],
-        [`${cap(margin.platform)} fees`, `–$${margin.fees.toFixed(2)}`,         ''],
-        ['Shipping est.',            `–$${margin.estimated_shipping.toFixed(2)}`,''],
-        ['You paid',                 `–$${margin.cost.toFixed(2)}`,             ''],
-      ].forEach(([l, v]) => body.innerHTML += brow(l, v));
-      const pc = margin.net_profit > 0 ? 'var(--buy)' : 'var(--pass)';
-      body.innerHTML += `<div class="brow total">
-        <span class="brow-label">Net profit</span>
-        <span class="brow-value" style="color:${pc}">${margin.net_profit >= 0 ? '+' : ''}$${margin.net_profit.toFixed(2)} <span style="font-size:0.78rem;font-weight:500;color:var(--muted)">(${margin.roi_percent}% ROI)</span></span>
-      </div>`;
-      card.appendChild(body);
-      frag.appendChild(card);
-    }
-
-    // ── AMAZON ──
-    if (amazon && !amazon.error) {
-      const card = makeCard('Amazon · Keepa');
-      const body = el('div', 'card-body');
-      body.innerHTML = `<div class="ag">
-        ${ac('Current',     amazon.amazon_price_current || amazon.marketplace_new_current)}
-        ${ac('90-Day Avg',  amazon.amazon_price_avg90 || amazon.marketplace_new_avg90, true)}
-        ${acRank('Sales Rank', amazon.sales_rank_current)}
-        ${ac('Best Estimate', amazon.best_price_estimate, true)}
-      </div>`;
-      card.appendChild(body);
-      frag.appendChild(card);
-    }
-
-    // ── WEB ──
-    if (web && !web.error && web.answer) {
-      const card = makeCard('Market Research · Linkup');
-      const body = el('div', 'card-body');
-      // Trim to ~180 chars, sentence boundary
-      let snippet = web.answer.length > 200
-        ? web.answer.slice(0, 200).replace(/[^.!?]*$/, '').trim() || web.answer.slice(0, 180) + '…'
-        : web.answer;
-      body.innerHTML = `<div class="web-text">${esc(snippet)}</div>`;
-      if (web.sources && web.sources.length) {
-        const sd = el('div', 'web-sources');
-        web.sources.slice(0, 3).forEach(u => {
-          if (u) sd.innerHTML += `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0])}</a>`;
-        });
-        body.appendChild(sd);
-      }
-      card.appendChild(body);
-      frag.appendChild(card);
-    }
-
-    results.appendChild(frag);
-  }
-
-  // Helpers
-  function el(tag, cls) { const e = document.createElement(tag); e.className = cls; return e; }
-  function makeCard(title) {
-    const card = el('div', 'card');
-    card.innerHTML = `<div class="card-header">${esc(title)}</div>`;
-    return card;
-  }
-  function brow(label, value) {
-    return `<div class="brow"><span class="brow-label">${esc(label)}</span><span class="brow-value">${esc(value)}</span></div>`;
-  }
-  function ac(label, val, hi) {
-    const d = val != null ? '$' + parseFloat(val).toFixed(2) : '—';
-    return `<div class="ac"><div class="ac-label">${esc(label)}</div><div class="ac-value ${hi && val ? 'green' : ''}">${d}</div></div>`;
-  }
-  function acRank(label, val) {
-    return `<div class="ac"><div class="ac-label">${esc(label)}</div><div class="ac-value">${val != null ? '#' + val.toLocaleString() : '—'}</div></div>`;
-  }
-  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
-  function esc(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-  }
-
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+var imgB64="",upc="";
+function triggerCamera(){document.getElementById("fileInput").click();}
+document.getElementById("fileInput").addEventListener("change",function(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var raw=ev.target.result;compressImage(raw,function(c){imgB64=c;var p=document.getElementById("preview");p.src=c;p.style.display="block";tryBarcode(c);doScan();});};reader.readAsDataURL(file);});
+function compressImage(dataUrl,cb){var img=new Image();img.onload=function(){var max=1024,w=img.width,h=img.height;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);cb(c.toDataURL("image/jpeg",0.8));};img.src=dataUrl;}
+function tryBarcode(d){if(typeof Quagga==="undefined")return;Quagga.decodeSingle({decoder:{readers:["ean_reader","upc_reader","upc_e_reader","code_128_reader"]},locate:true,src:d},function(r){if(r&&r.codeResult)upc=r.codeResult.code;});}
+function setLoading(t){document.getElementById("loading").style.display="block";document.getElementById("results").style.display="none";document.getElementById("loadingText").textContent=t||"Identifying item...";document.getElementById("scanBtn").disabled=true;}
+function doScan(){setLoading("Identifying item...");var cost=parseFloat(document.getElementById("costInput").value)||0;var steps=["Identifying item...","Looking up prices...","Calculating margins..."];var si=0;var iv=setInterval(function(){si++;if(si<steps.length)document.getElementById("loadingText").textContent=steps[si];},2500);fetch("/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:imgB64,upc:upc,cost_paid:cost})}).then(function(r){return r.json();}).then(function(data){clearInterval(iv);document.getElementById("loading").style.display="none";showResults(data,cost);}).catch(function(err){clearInterval(iv);document.getElementById("loading").style.display="none";document.getElementById("loadingText").textContent="Error: "+err.message;document.getElementById("loading").style.display="block";document.getElementById("scanBtn").disabled=false;});}
+function showResults(data,cost){document.getElementById("results").style.display="block";document.getElementById("scanBtn").disabled=false;var ident=data.identification||{};if(ident.name){document.getElementById("itemName").textContent=ident.name;document.getElementById("itemBrand").textContent=ident.brand||"";document.getElementById("itemSource").textContent="via barcode lookup";}else if(ident.description){var lines=ident.description.split("\n");document.getElementById("itemName").textContent=lines[0].replace(/^[\d\.\)\-\*]+\s*/,"").substring(0,120);document.getElementById("itemBrand").textContent=lines[1]?lines[1].replace(/^[\d\.\)\-\*]+\s*/,"").substring(0,80):"";document.getElementById("itemSource").textContent="via AI vision";}var keepa=data.keepa||{},margin=data.margin||{};var sellPrice=margin.sell_price||keepa.buy_box||keepa.avg_new_90d||null;var netProfit=margin.net_profit;document.getElementById("sellsFor").textContent=sellPrice?"$"+sellPrice.toFixed(2):"N/A";if(netProfit!==undefined&&netProfit!==null){var ym=document.getElementById("youMake");ym.textContent="$"+netProfit.toFixed(2);ym.className="kn-value "+(netProfit>10?"green":netProfit>0?"yellow":"red");}var vBox=document.getElementById("verdictBox"),vLabel=document.getElementById("verdictLabel"),vSub=document.getElementById("verdictSub");vBox.className="verdict";if(netProfit!==undefined&&netProfit!==null){if(netProfit>10){vBox.classList.add("buy");vLabel.textContent="BUY IT";vSub.textContent="$"+netProfit.toFixed(2)+" profit"+(margin.roi_pct?" · "+margin.roi_pct+"% ROI":"");}else if(netProfit>0){vBox.classList.add("maybe");vLabel.textContent="THIN MARGIN";vSub.textContent="Only $"+netProfit.toFixed(2)+" profit — your call";}else{vBox.classList.add("pass");vLabel.textContent="PASS";vSub.textContent="Loses $"+Math.abs(netProfit).toFixed(2)+" after fees";}}else if(sellPrice){vBox.classList.add("maybe");vLabel.textContent="CHECK IT";vSub.textContent="Sells for $"+sellPrice.toFixed(2)+" · enter your cost for verdict";}else{vBox.classList.add("pass");vLabel.textContent="NO DATA";vSub.textContent="Could not find pricing data";}if(margin.sell_price){document.getElementById("breakdownCard").style.display="block";document.getElementById("breakdownRows").innerHTML=row("Sell price","$"+margin.sell_price.toFixed(2),"")+row("Platform fees (~15%)","-$"+margin.estimated_fees.toFixed(2),"r")+row("Shipping estimate","-$"+margin.estimated_shipping.toFixed(2),"r")+row("Your cost","-$"+parseFloat(margin.cost_paid).toFixed(2),"r")+row("Net profit","$"+margin.net_profit.toFixed(2),margin.net_profit>0?"g":"r");}var linkup=data.linkup||{};if(linkup.answer){document.getElementById("marketCard").style.display="block";document.getElementById("marketText").textContent=linkup.answer.substring(0,400)+(linkup.answer.length>400?"...":"");if(linkup.sources&&linkup.sources.length){document.getElementById("marketLinks").innerHTML=linkup.sources.slice(0,4).map(function(s){return'<a class="market-link" href="'+s.url+'" target="_blank">'+(s.name||"Source")+"</a>";}).join("");}}}
+function row(label,val,cls){return'<div class="price-row"><span class="pl">'+label+'</span><span class="pv '+cls+'">'+val+'</span></div>';}
+function resetApp(){imgB64="";upc="";document.getElementById("preview").style.display="none";document.getElementById("preview").src="";document.getElementById("fileInput").value="";document.getElementById("results").style.display="none";document.getElementById("scanBtn").disabled=false;document.getElementById("costInput").value="";}
+if("serviceWorker"in navigator){navigator.serviceWorker.register("/static/sw.js").catch(function(){});}
 </script>
 </body>
 </html>
