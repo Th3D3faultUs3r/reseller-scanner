@@ -384,7 +384,7 @@
     <div class="health-dot" id="healthDot"></div>
   </div>
 
-  <!-- Cost â always visible -->
+  <!-- Cost — always visible -->
   <div class="cost-row">
     <span class="cost-label">Paid $</span>
     <input type="number" id="costInput" placeholder="0.00" min="0" step="0.25" inputmode="decimal">
@@ -406,12 +406,12 @@
 
   <!-- Scan -->
   <input type="file" id="fileInput" accept="image/*" capture="environment">
-  <button class="btn-scan" id="btnScan">ð·&nbsp;&nbsp;SCAN ITEM</button>
+  <button class="btn-scan" id="btnScan">SCAN ITEM</button>
 
   <!-- Loader -->
   <div class="loader" id="loader">
     <div class="spinner"></div>
-    <span class="loader-msg" id="loaderMsg">Scanningâ¦</span>
+    <span class="loader-msg" id="loaderMsg">Scanning…</span>
   </div>
 
   <!-- Results -->
@@ -422,7 +422,7 @@
   let selectedFile = null;
   let selectedPlatform = 'ebay';
   let loaderInterval = null;
-  const loaderMessages = ['Identifying itemâ¦', 'Looking up pricesâ¦', 'Calculating marginâ¦', 'Almost doneâ¦'];
+  const loaderMessages = ['Identifying item…', 'Looking up prices…', 'Calculating margin…', 'Almost done…'];
 
   const fileInput    = document.getElementById('fileInput');
   const preview      = document.getElementById('preview');
@@ -505,7 +505,7 @@
       if (!resp.ok) throw new Error(data.error || 'Server error');
       render(data);
     } catch (err) {
-      results.innerHTML = `<div class="error-msg">â ï¸ ${esc(err.message)}<br><small style="color:var(--muted);margin-top:6px;display:block">Try again or check your connection</small></div>`;
+      results.innerHTML = `<div class="error-msg">⚠️ ${esc(err.message)}<br><small style="color:var(--muted);margin-top:6px;display:block">Try again or check your connection</small></div>`;
     } finally {
       setLoading(false);
     }
@@ -530,7 +530,7 @@
     const web    = (data.pricing || {}).web;
 
     if (data.barcode) {
-      barcodeBadge.textContent = 'ð ' + data.barcode;
+      barcodeBadge.textContent = data.barcode;
       barcodeBadge.classList.add('visible');
     }
 
@@ -542,15 +542,15 @@
       netProfit = margin.net_profit;
       sellPrice = margin.sell_price;
       roi = margin.roi_percent;
-      if (netProfit > 5 && roi > 30)      { vc = 'buy';  vt = 'BUY';          vs = `${roi}% ROI Â· sell on ${margin.platform}`; }
-      else if (netProfit > 0)             { vc = 'thin'; vt = 'THIN MARGIN';   vs = `only +$${netProfit.toFixed(2)} Â· ${roi}% ROI`; }
+      if (netProfit > 5 && roi > 30)      { vc = 'buy';  vt = 'BUY';          vs = `${roi}% ROI · sell on ${margin.platform}`; }
+      else if (netProfit > 0)             { vc = 'thin'; vt = 'THIN MARGIN';   vs = `only +$${netProfit.toFixed(2)} · ${roi}% ROI`; }
       else                                { vc = 'pass'; vt = 'PASS';          vs = `loses $${Math.abs(netProfit).toFixed(2)} after fees`; }
     } else if (amazon && amazon.best_price_estimate) {
       sellPrice = amazon.best_price_estimate;
       vc = 'info'; vt = 'PRICED'; vs = `enter cost to see profit`;
     }
 
-    // ââ VERDICT BANNER ââ
+    // ── VERDICT BANNER ──
     const banner = el('div', `verdict-banner ${vc}`);
     banner.innerHTML = `
       <div class="verdict-word ${vc}">${vt}</div>
@@ -562,36 +562,36 @@
     `;
     frag.appendChild(banner);
 
-    // ââ BIG NUMBERS ââ
+    // ── BIG NUMBERS ──
     if (sellPrice !== null || netProfit !== null) {
       const row = el('div', 'numbers-row');
 
       const c1 = el('div', 'num-cell');
-      c1.innerHTML = `<div class="num-label">Sell For</div><div class="num-value">${sellPrice != null ? '$' + sellPrice.toFixed(2) : 'â'}</div>`;
+      c1.innerHTML = `<div class="num-label">Sell For</div><div class="num-value">${sellPrice != null ? '$' + sellPrice.toFixed(2) : '—'}</div>`;
 
       const c2 = el('div', 'num-cell');
       const pcolor = netProfit == null ? '' : netProfit > 5 ? 'green' : netProfit > 0 ? 'yellow' : 'red';
-      const ptext  = netProfit != null ? (netProfit >= 0 ? '+' : '') + '$' + Math.abs(netProfit).toFixed(2) : 'â';
+      const ptext  = netProfit != null ? (netProfit >= 0 ? '+' : '') + '$' + Math.abs(netProfit).toFixed(2) : '—';
       c2.innerHTML = `<div class="num-label">You Make</div><div class="num-value ${pcolor}">${ptext}</div>`;
 
       row.append(c1, c2);
       frag.appendChild(row);
     }
 
-    // ââ DIVIDER ââ
+    // ── DIVIDER ──
     const div = el('div', 'section-divider');
     div.innerHTML = '<span>details</span>';
     frag.appendChild(div);
 
-    // ââ BREAKDOWN ââ
+    // ── BREAKDOWN ──
     if (margin) {
       const card = makeCard('Profit Breakdown');
       const body = el('div', 'card-body');
       [
         ['Sell price',               `$${margin.sell_price.toFixed(2)}`,        ''],
-        [`${cap(margin.platform)} fees`, `â$${margin.fees.toFixed(2)}`,         ''],
-        ['Shipping est.',            `â$${margin.estimated_shipping.toFixed(2)}`,''],
-        ['You paid',                 `â$${margin.cost.toFixed(2)}`,             ''],
+        [`${cap(margin.platform)} fees`, `–$${margin.fees.toFixed(2)}`,         ''],
+        ['Shipping est.',            `–$${margin.estimated_shipping.toFixed(2)}`,''],
+        ['You paid',                 `–$${margin.cost.toFixed(2)}`,             ''],
       ].forEach(([l, v]) => body.innerHTML += brow(l, v));
       const pc = margin.net_profit > 0 ? 'var(--buy)' : 'var(--pass)';
       body.innerHTML += `<div class="brow total">
@@ -602,9 +602,9 @@
       frag.appendChild(card);
     }
 
-    // ââ AMAZON ââ
+    // ── AMAZON ──
     if (amazon && !amazon.error) {
-      const card = makeCard('Amazon Â· Keepa');
+      const card = makeCard('Amazon · Keepa');
       const body = el('div', 'card-body');
       body.innerHTML = `<div class="ag">
         ${ac('Current',     amazon.amazon_price_current || amazon.marketplace_new_current)}
@@ -616,13 +616,13 @@
       frag.appendChild(card);
     }
 
-    // ââ WEB ââ
+    // ── WEB ──
     if (web && !web.error && web.answer) {
-      const card = makeCard('Market Research Â· Linkup');
+      const card = makeCard('Market Research · Linkup');
       const body = el('div', 'card-body');
       // Trim to ~180 chars, sentence boundary
       let snippet = web.answer.length > 200
-        ? web.answer.slice(0, 200).replace(/[^.!?]*$/, '').trim() || web.answer.slice(0, 180) + 'â¦'
+        ? web.answer.slice(0, 200).replace(/[^.!?]*$/, '').trim() || web.answer.slice(0, 180) + '…'
         : web.answer;
       body.innerHTML = `<div class="web-text">${esc(snippet)}</div>`;
       if (web.sources && web.sources.length) {
@@ -650,11 +650,11 @@
     return `<div class="brow"><span class="brow-label">${esc(label)}</span><span class="brow-value">${esc(value)}</span></div>`;
   }
   function ac(label, val, hi) {
-    const d = val != null ? '$' + parseFloat(val).toFixed(2) : 'â';
+    const d = val != null ? '$' + parseFloat(val).toFixed(2) : '—';
     return `<div class="ac"><div class="ac-label">${esc(label)}</div><div class="ac-value ${hi && val ? 'green' : ''}">${d}</div></div>`;
   }
   function acRank(label, val) {
-    return `<div class="ac"><div class="ac-label">${esc(label)}</div><div class="ac-value">${val != null ? '#' + val.toLocaleString() : 'â'}</div></div>`;
+    return `<div class="ac"><div class="ac-label">${esc(label)}</div><div class="ac-value">${val != null ? '#' + val.toLocaleString() : '—'}</div></div>`;
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function esc(s) {
