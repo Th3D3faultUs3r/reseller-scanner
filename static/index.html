@@ -148,24 +148,81 @@ function triggerCamera() {
 document.getElementById('fileInput').addEventListener('change', function(e) {
   var file = e.target.files[0];
   if (!file) return;
-  // Use createObjectURL to avoid data URL size limits with large photos
-  var objectUrl = URL.createObjectURL(file);
-  compressImage(objectUrl, function(compressed) {
-    URL.revokeObjectURL(objectUrl);
-    imgB64 = compressed;
+
+  var sizeKB = Math.round(file.size / 1024);
+  var fileType = file.type || 'unknown';
+  imgB64 = ''; upc = '';
+
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('loadingText').textContent = 'Reading photo (' + sizeKB + 'KB, ' + fileType + ')...';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('scanBtn').disabled = true;
+
+  var reader = new FileReader();
+  reader.onerror = function() {
+    document.getElementById('loadingText').textContent = 'Could not read file (' + fileType + ', ' + sizeKB + 'KB). Try a different photo.';
+    document.getElementById('scanBtn').disabled = false;
+  };
+  reader.onload = function(ev) {
+    var dataUrl = ev.target.result;
     var prev = document.getElementById('preview');
-    prev.src = compressed;
+    prev.src = dataUrl;
     prev.style.display = 'block';
-    tryBarcode(compressed);
-    doScan();
-  });
+    tryBarcode(dataUrl);
+
+    // Small files: send directly, no compression needed
+    if (file.size <= 600000) {
+      imgB64 = dataUrl;
+      doScan();
+      return;
+    }
+
+    // Larger files: try canvas compression via blob URL, fall back to raw
+    document.getElementById('loadingText').textContent = 'Compressing photo (' + sizeKB + 'KB)...';
+    var blobUrl = URL.createObjectURL(file);
+    var settled = false;
+
+    function finish(result) {
+      if (settled) return;
+      settled = true;
+      try { URL.revokeObjectURL(blobUrl); } catch(e) {}
+      imgB64 = result;
+      doScan();
+    }
+
+    function tryDataUrlCompress() {
+      // Second attempt: compress from FileReader data URL
+      var img2 = new Image();
+      img2.onerror = function() {
+        // All compression failed — send raw if small enough
+        if (dataUrl.length <= 8000000) {
+          finish(dataUrl);
+        } else {
+          settled = true;
+          try { URL.revokeObjectURL(blobUrl); } catch(e) {}
+          document.getElementById('loadingText').textContent = 'Photo too large (' + sizeKB + 'KB). Please try a smaller photo.';
+          document.getElementById('scanBtn').disabled = false;
+        }
+      };
+      img2.onload = function() { finish(canvasCompress(img2) || dataUrl); };
+      img2.src = dataUrl;
+    }
+
+    var img = new Image();
+    img.onerror = function() { tryDataUrlCompress(); };
+    img.onload = function() {
+      var compressed = canvasCompress(img);
+      if (compressed) { finish(compressed); } else { tryDataUrlCompress(); }
+    };
+    img.src = blobUrl;
+  };
+  reader.readAsDataURL(file);
 });
 
-function compressImage(dataUrl, cb) {
-  var img = new Image();
-  img.onerror = function() { cb(''); }; // surface failures so doScan shows error
-  img.onload = function() {
+function canvasCompress(img) {
+  try {
     var max = 1024, w = img.width, h = img.height;
+    if (!w || !h) return null;
     if (w > max || h > max) {
       if (w > h) { h = Math.round(h * max / w); w = max; }
       else { w = Math.round(w * max / h); h = max; }
@@ -173,9 +230,9 @@ function compressImage(dataUrl, cb) {
     var c = document.createElement('canvas');
     c.width = w; c.height = h;
     c.getContext('2d').drawImage(img, 0, 0, w, h);
-    cb(c.toDataURL('image/jpeg', 0.8));
-  };
-  img.src = dataUrl;
+    var result = c.toDataURL('image/jpeg', 0.8);
+    return (result && result.length > 200) ? result : null;
+  } catch(e) { return null; }
 }
 
 function tryBarcode(dataUrl) {
