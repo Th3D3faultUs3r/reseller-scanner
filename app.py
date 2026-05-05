@@ -1,367 +1,222 @@
 import os
 import base64
-import json
 import re
-import io
 import requests
 from flask import Flask, request, jsonify, send_from_directory
-from PIL import Image
-import anthropic
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max upload
+client = Anthropic()
 
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
-KEEPA_API_KEY = os.getenv('KEEPA_API_KEY')
-LINKUP_API_KEY = os.getenv('LINKUP_API_KEY')
-
-# Optional: pyzbar for server-side barcode decoding
-try:
-    from pyzbar.pyzbar import decode as pyzbar_decode
-    PYZBAR_AVAILABLE = True
-except ImportError:
-    PYZBAR_AVAILABLE = False
-
-
-# ---------------------------------------------------------------------------
-# Barcode extraction
-# ---------------------------------------------------------------------------
-
-def extract_barcode_from_image(image_bytes):
-    """Attempt to decode a barcode/QR code from raw image bytes using pyzbar."""
-    if not PYZBAR_AVAILABLE:
-        return None
-    try:
-        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        results = pyzbar_decode(img)
-        for r in results:
-            code = r.data.decode('utf-8').strip()
-            if code:
-                return code
-    except Exception:
-        pass
-    return None
-
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+KEEPA_API_KEY = os.environ.get('KEEPA_API_KEY', '')
+LINKUP_API_KEY = os.environ.get('LINKUP_API_KEY', '')
 
 def lookup_upc(upc):
-    """Query UPCitemdb for product details."""
+    """Look up product info from UPC using UPCitemdb."""
     try:
-        resp = requests.get(
-            'https://api.upcitemdb.com/prod/trial/lookup',
-            params={'upc': upc},
-            timeout=6
-        )
-        data = resp.json()
-        items = data.get('items', [])
-        if items:
-            item = items[0]
+        r = requests.get(f'https://api.upcitemdb.com/prod/trial/lookup?upc={upc}', timeout=5)
+        data = r.json()
+        if data.get('items'):
+            item = data['items'][0]
             return {
-                'source': 'barcode',
-                'upc': upc,
-                'title': item.get('title', ''),
+                'found': True,
+                'name': item.get('title', ''),
                 'brand': item.get('brand', ''),
-                'category': item.get('category', ''),
                 'description': item.get('description', ''),
-                'asin': item.get('asin', '') or '',
-                'confidence': 'High',
+                'upc': upc
             }
     except Exception:
         pass
-    return None
+    return {'found': False}
 
-
-# ---------------------------------------------------------------------------
-# Claude Haiku vision identification
-# ---------------------------------------------------------------------------
-
-def identify_with_claude(image_bytes, content_type='image/jpeg'):
-    """Use Claude Haiku to identify an item from a photo."""
+def identify_with_claude(image_b64):
+    """Use Claude Haiku vision to identify the item."""
     if not ANTHROPIC_API_KEY:
-        return {'error': 'ANTHROPIC_API_KEY not configured', 'source': 'claude_vision'}
-
-    # Resize to max 1024px before sending â phone photos (3-10MB) are too large
-    # and cause timeouts when uploading to Anthropic's API.
+        return {'error': 'Anthropic API key not configured'}
     try:
-        img = Image.open(io.BytesIO(image_bytes))
-        img.thumbnail((1024, 1024), Image.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format='JPEG', quality=82)
-        image_bytes = buf.getvalue()
-        media_type = 'image/jpeg'
-    except Exception:
-        media_type = content_type if content_type.startswith('image/') else 'image/jpeg'
-        if media_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
-            media_type = 'image/jpeg'
+        # Strip data URL prefix if present
+        if ',' in image_b64:
+            image_b64 = image_b64.split(',', 1)[1]
 
-    b64 = base64.standard_b64encode(image_bytes).decode('utf-8')
-
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, timeout=45.0)
-
-    prompt = (
-        'You are an expert resale item identifier. Examine this photo carefully and respond '
-        'with JSON only â no other text.\n\n'
-        'Return exactly this structure:\n'
-        '{\n'
-        '  "title": "full product name including model/size/quantity",\n'
-        '  "brand": "brand name, or Unknown",\n'
-        '  "category": "product category",\n'
-        '  "condition": "New / Like New / Used / Unknown",\n'
-        '  "confidence": "High / Medium / Low",\n'
-        '  "search_query": "best eBay/Amazon search query to find sold prices",\n'
-        '  "asin": "Amazon ASIN if visible or known, else empty string",\n'
-        '  "notes": "any detail useful for resale: quantity, colour, sealed/open, etc."\n'
-        '}\n\n'
-        'Be specific. Include model numbers, sizes, and counts when visible.'
-    )
-
-    message = client.messages.create(
-        model='claude-haiku-4-5-20251001',
-        max_tokens=512,
-        messages=[{
-            'role': 'user',
-            'content': [
-                {
-                    'type': 'image',
-                    'source': {
-                        'type': 'base64',
-                        'media_type': media_type,
-                        'data': b64,
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=512,
+            messages=[{
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'image',
+                        'source': {
+                            'type': 'base64',
+                            'media_type': 'image/jpeg',
+                            'data': image_b64
+                        }
+                    },
+                    {
+                        'type': 'text',
+                        'text': 'Identify this item precisely. Give me: (1) Product name, (2) Brand, (3) Model/version if visible, (4) Condition (new/used/sealed), (5) A short search query I could use to find sold prices on eBay. Be specific and concise.'
                     }
-                },
-                {'type': 'text', 'text': prompt}
-            ]
-        }]
-    )
+                ]
+            }]
+        )
+        text = response.content[0].text
+        return {'found': True, 'description': text, 'source': 'claude_vision'}
+    except Exception as e:
+        return {'error': str(e)}
 
-    raw = message.content[0].text.strip()
-    match = re.search(r'\{.*\}', raw, re.DOTALL)
-    if match:
-        try:
-            result = json.loads(match.group())
-            result['source'] = 'claude_vision'
-            return result
-        except json.JSONDecodeError:
-            pass
-    return {'title': raw, 'source': 'claude_vision', 'confidence': 'Low'}
-
-
-# ---------------------------------------------------------------------------
-# Pricing: Keepa (Amazon)
-# ---------------------------------------------------------------------------
-
-def _keepa_cents(val):
-    """Convert Keepa's internal price format (cents * 100) to dollars."""
-    if val and isinstance(val, (int, float)) and val > 0:
-        return round(val / 100, 2)
-    return None
-
-
-def get_keepa_data(asin):
-    """Fetch Amazon price history and sales rank from Keepa."""
+def get_keepa_data(upc):
+    """Get Amazon pricing and sales rank history from Keepa."""
     if not KEEPA_API_KEY:
-        return None
-    if not asin:
-        return None
+        return {'configured': False, 'message': 'Keepa not configured — add KEEPA_API_KEY to use Amazon pricing data'}
     try:
-        resp = requests.get(
+        # Search by UPC
+        r = requests.get(
             'https://api.keepa.com/product',
             params={
                 'key': KEEPA_API_KEY,
-                'domain': 1,       # amazon.com
-                'asin': asin,
-                'stats': 90,       # include 90-day statistics
-                'history': 0,      # skip raw history arrays to keep response small
+                'domain': 1,  # amazon.com
+                'code': upc,
+                'stats': 90,
+                'history': 0
             },
-            timeout=12
+            timeout=10
         )
-        data = resp.json()
-        products = data.get('products', [])
-        if not products:
-            return None
+        data = r.json()
+        if not data.get('products'):
+            return {'configured': True, 'found': False}
 
-        p = products[0]
-        stats = p.get('stats') or {}
-        current = stats.get('current') or []
-        avg90 = stats.get('avg90') or []
+        product = data['products'][0]
+        stats = product.get('stats', {})
+        csv = product.get('csv', [])
 
-        # current / avg90 are arrays indexed by price type:
-        #   0 = Amazon, 1 = Marketplace New, 3 = Sales Rank
-        amazon_current = _keepa_cents(current[0]) if len(current) > 0 else None
-        new_current    = _keepa_cents(current[1]) if len(current) > 1 else None
-        rank_current   = current[3] if len(current) > 3 and isinstance(current[3], int) else None
+        # Extract current prices (Keepa stores prices as integers * 100, -1 = unavailable)
+        def price(val):
+            return round(val / 100, 2) if val and val != -1 else None
 
-        amazon_avg90   = _keepa_cents(avg90[0]) if len(avg90) > 0 else None
-        new_avg90      = _keepa_cents(avg90[1]) if len(avg90) > 1 else None
+        current = stats.get('current', [])
+        amazon_price = price(current[0]) if len(current) > 0 else None
+        new_3p_price = price(current[1]) if len(current) > 1 else None
+        used_price = price(current[2]) if len(current) > 2 else None
+        buy_box = price(current[18]) if len(current) > 18 else None
 
-        best_price = amazon_avg90 or new_avg90 or amazon_current or new_current
+        avg90 = stats.get('avg90', [])
+        avg_new = price(avg90[1]) if len(avg90) > 1 else None
+        avg_used = price(avg90[2]) if len(avg90) > 2 else None
 
         return {
-            'source': 'keepa',
-            'asin': asin,
-            'title': p.get('title', ''),
-            'amazon_price_current': amazon_current,
-            'marketplace_new_current': new_current,
-            'amazon_price_avg90': amazon_avg90,
-            'marketplace_new_avg90': new_avg90,
-            'sales_rank_current': rank_current,
-            'best_price_estimate': best_price,
+            'configured': True,
+            'found': True,
+            'title': product.get('title', ''),
+            'asin': product.get('asin', ''),
+            'amazon_price': amazon_price,
+            'new_3p_price': new_3p_price,
+            'used_price': used_price,
+            'buy_box': buy_box,
+            'avg_new_90d': avg_new,
+            'avg_used_90d': avg_used,
+            'sales_rank': product.get('salesRanks', {})
         }
     except Exception as e:
-        return {'source': 'keepa', 'error': str(e)}
-
-
-# ---------------------------------------------------------------------------
-# Pricing: Linkup web search
-# ---------------------------------------------------------------------------
+        return {'configured': True, 'error': str(e)}
 
 def get_linkup_data(query):
-    """Search for sold/resale prices using Linkup API."""
+    """Search for sold prices using Linkup API."""
     if not LINKUP_API_KEY:
-        return None
-    if not query:
-        return None
+        return {'configured': False, 'message': 'Linkup not configured — add LINKUP_API_KEY to use web price search'}
     try:
-        resp = requests.post(
+        r = requests.post(
             'https://api.linkup.so/v1/search',
-            headers={
-                'Authorization': f'Bearer {LINKUP_API_KEY}',
-                'Content-Type': 'application/json',
-            },
+            headers={'Authorization': f'Bearer {LINKUP_API_KEY}', 'Content-Type': 'application/json'},
             json={
-                'q': f'{query} sold price resale eBay Amazon',
+                'q': f'{query} sold price eBay Poshmark Mercari resale value',
                 'depth': 'standard',
-                'outputType': 'sourcedAnswer',
+                'outputType': 'sourcedAnswer'
             },
             timeout=15
         )
-        data = resp.json()
+        data = r.json()
         return {
-            'source': 'linkup',
+            'configured': True,
             'answer': data.get('answer', ''),
-            'sources': [s.get('url', '') for s in data.get('sources', [])[:4]],
+            'sources': [{'name': s.get('name'), 'url': s.get('url')} for s in data.get('sources', [])[:5]]
         }
     except Exception as e:
-        return {'source': 'linkup', 'error': str(e)}
-
-
-# ---------------------------------------------------------------------------
-# Margin calculator
-# ---------------------------------------------------------------------------
-
-PLATFORM_FEES = {
-    'ebay':     0.1325,
-    'amazon':   0.15,
-    'mercari':  0.10,
-    'poshmark': 0.20,
-    'etsy':     0.065,
-}
-
-def calculate_margin(cost, sell_price, platform='ebay'):
-    """Return net profit, ROI, and a BUY / PASS verdict."""
-    if cost is None or sell_price is None:
-        return None
-    fee_rate = PLATFORM_FEES.get(platform, 0.1325)
-    fees = round(sell_price * fee_rate, 2)
-    shipping = 5.00  # conservative flat estimate
-    net = round(sell_price - fees - shipping - cost, 2)
-    roi = round((net / cost) * 100, 1) if cost > 0 else 0
-    return {
-        'cost': cost,
-        'sell_price': sell_price,
-        'platform': platform,
-        'fees': fees,
-        'estimated_shipping': shipping,
-        'net_profit': net,
-        'roi_percent': roi,
-        'verdict': 'BUY' if net > 5 and roi > 30 else 'PASS',
-    }
-
-
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
+        return {'configured': True, 'error': str(e)}
 
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
 
-
 @app.route('/health')
 def health():
-    return jsonify({
-        'status': 'ok',
-        'anthropic':  'configured' if ANTHROPIC_API_KEY else 'not configured',
-        'keepa':      'configured' if KEEPA_API_KEY else 'not configured',
-        'linkup':     'configured' if LINKUP_API_KEY else 'not configured',
-        'pyzbar':     'available'  if PYZBAR_AVAILABLE else 'not available â install pyzbar + libzbar0',
-    })
-
+    return jsonify({'status': 'ok'})
 
 @app.route('/scan', methods=['POST'])
 def scan():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-
-    file        = request.files['image']
-    image_bytes = file.read()
-    cost        = request.form.get('cost', type=float)
-    platform    = request.form.get('platform', 'ebay')
+    data = request.get_json()
+    image_b64 = data.get('image', '')
+    upc = data.get('upc', '')  # client-side barcode detection result
+    cost_paid = data.get('cost_paid', 0)
 
     result = {
-        'identification': None,
-        'barcode': None,
-        'pricing': {},
-        'margin': None,
+        'identification': {},
+        'keepa': {},
+        'linkup': {},
+        'margin': {}
     }
 
-    # ------------------------------------------------------------------
-    # Step 1: Try barcode extraction (server-side pyzbar)
-    # ------------------------------------------------------------------
-    upc          = extract_barcode_from_image(image_bytes)
-    product_info = None
-
+    # Step 1: Identify the item
     if upc:
-        result['barcode'] = upc
-        product_info = lookup_upc(upc)
+        upc_result = lookup_upc(upc)
+        if upc_result['found']:
+            result['identification'] = upc_result
+            search_query = f"{upc_result.get('brand', '')} {upc_result.get('name', '')}".strip()
+        else:
+            # UPC lookup failed, fall back to vision
+            vision = identify_with_claude(image_b64)
+            result['identification'] = vision
+            search_query = vision.get('description', '')[:200]
+    elif image_b64:
+        vision = identify_with_claude(image_b64)
+        result['identification'] = vision
+        search_query = vision.get('description', '')[:200]
+    else:
+        return jsonify({'error': 'No image or UPC provided'}), 400
 
-    # ------------------------------------------------------------------
-    # Step 2: Fall back to Claude Haiku vision
-    # ------------------------------------------------------------------
-    if not product_info:
-        product_info = identify_with_claude(image_bytes, file.content_type or 'image/jpeg')
+    # Step 2: Get pricing data
+    if upc:
+        result['keepa'] = get_keepa_data(upc)
+    else:
+        result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False, 'note': 'Keepa requires UPC/barcode'}
 
-    result['identification'] = product_info
+    result['linkup'] = get_linkup_data(search_query)
 
-    # ------------------------------------------------------------------
-    # Step 3: Pricing
-    # ------------------------------------------------------------------
-    asin         = (product_info or {}).get('asin', '')
-    search_query = (product_info or {}).get('search_query') or (product_info or {}).get('title', '')
+    # Step 3: Margin calculation
+    sell_price = None
+    if result['keepa'].get('buy_box'):
+        sell_price = result['keepa']['buy_box']
+    elif result['keepa'].get('avg_new_90d'):
+        sell_price = result['keepa']['avg_new_90d']
 
-    if asin:
-        keepa = get_keepa_data(asin)
-        if keepa:
-            result['pricing']['amazon'] = keepa
-
-    if search_query:
-        linkup = get_linkup_data(search_query)
-        if linkup:
-            result['pricing']['web'] = linkup
-
-    # ------------------------------------------------------------------
-    # Step 4: Margin calc
-    # ------------------------------------------------------------------
-    if cost is not None:
-        sell_price = None
-        if result['pricing'].get('amazon', {}).get('best_price_estimate'):
-            sell_price = result['pricing']['amazon']['best_price_estimate']
-        if sell_price:
-            result['margin'] = calculate_margin(cost, sell_price, platform)
+    if sell_price and cost_paid:
+        fees = sell_price * 0.15  # ~15% platform fees estimate
+        shipping = 4.00
+        net = sell_price - fees - shipping - float(cost_paid)
+        result['margin'] = {
+            'sell_price': sell_price,
+            'cost_paid': float(cost_paid),
+            'estimated_fees': round(fees, 2),
+            'estimated_shipping': shipping,
+            'net_profit': round(net, 2),
+            'roi_pct': round((net / float(cost_paid)) * 100, 1) if cost_paid else None
+        }
 
     return jsonify(result)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
