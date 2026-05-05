@@ -8,56 +8,56 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; font-size: 16px; }
   .container { max-width: 480px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
-  .scan-area { background: #1a1a1a; border: 2px dashed #333; border-radius: 16px; padding: 32px 20px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: border-color 0.2s; }
+  h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 15px; color: #666; margin-bottom: 24px; }
+  .scan-area { background: #1a1a1a; border: 2px dashed #333; border-radius: 16px; padding: 36px 20px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: border-color 0.2s; }
   .scan-area:hover { border-color: #555; }
-  .scan-icon { font-size: 48px; margin-bottom: 12px; }
-  .scan-label { font-size: 16px; color: #aaa; margin-bottom: 6px; }
-  .scan-sub { font-size: 12px; color: #555; }
+  .scan-icon { font-size: 56px; margin-bottom: 12px; }
+  .scan-label { font-size: 18px; color: #aaa; margin-bottom: 6px; }
+  .scan-sub { font-size: 14px; color: #555; }
   #fileInput { display: none; }
   .cost-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .cost-row label { font-size: 14px; color: #aaa; white-space: nowrap; }
-  .cost-row input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 16px; outline: none; }
+  .cost-row label { font-size: 16px; color: #aaa; white-space: nowrap; }
+  .cost-row input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 18px; outline: none; }
   .cost-row input:focus { border-color: #555; }
-  .scan-btn { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 17px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .scan-btn { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 18px; font-size: 19px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
   .scan-btn:hover { background: #1d4ed8; }
   .scan-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-  .status { text-align: center; padding: 20px; color: #888; font-size: 14px; display: none; }
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #333; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  .status { text-align: center; padding: 24px; color: #888; font-size: 16px; display: none; }
+  .spinner { display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .results { display: none; }
-  .card { background: #1a1a1a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin-bottom: 10px; }
-  .item-name { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-  .item-brand { font-size: 13px; color: #888; }
-  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #222; }
+  .card { background: #1a1a1a; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin-bottom: 12px; }
+  .item-name { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 6px; line-height: 1.3; }
+  .item-brand { font-size: 15px; color: #888; }
+  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #222; }
   .price-row:last-child { border-bottom: none; }
-  .price-label { font-size: 13px; color: #888; }
-  .price-val { font-size: 15px; font-weight: 600; color: #fff; }
+  .price-label { font-size: 15px; color: #888; }
+  .price-val { font-size: 17px; font-weight: 600; color: #fff; }
   .price-val.green { color: #22c55e; }
   .price-val.red { color: #ef4444; }
   .price-val.yellow { color: #eab308; }
-  .verdict { text-align: center; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .verdict { text-align: center; padding: 18px; border-radius: 12px; font-size: 22px; font-weight: 700; margin-bottom: 14px; letter-spacing: 1px; }
   .verdict.buy { background: #14532d; color: #22c55e; }
   .verdict.pass { background: #450a0a; color: #ef4444; }
   .verdict.maybe { background: #422006; color: #eab308; }
-  .linkup-answer { font-size: 13px; color: #aaa; line-height: 1.6; }
-  .source-link { display: inline-block; margin-top: 6px; font-size: 11px; color: #2563eb; text-decoration: none; margin-right: 8px; }
-  .preview-img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-bottom: 12px; display: none; }
-  .reset-btn { width: 100%; background: #1a1a1a; color: #888; border: 1px solid #333; border-radius: 12px; padding: 12px; font-size: 15px; cursor: pointer; margin-top: 8px; }
+  .linkup-answer { font-size: 15px; color: #ccc; line-height: 1.7; }
+  .source-link { display: inline-block; margin-top: 8px; font-size: 13px; color: #2563eb; text-decoration: none; margin-right: 10px; }
+  .preview-img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 14px; display: none; }
+  .reset-btn { width: 100%; background: #1a1a1a; color: #888; border: 1px solid #333; border-radius: 12px; padding: 14px; font-size: 16px; cursor: pointer; margin-top: 8px; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Reseller Scanner</h1>
+  <h1>&#128230; Reseller Scanner</h1>
   <p class="subtitle">Scan any item to check resale value</p>
   <div id="scanArea" class="scan-area" onclick="document.getElementById('fileInput').click()">
     <div class="scan-icon">&#128247;</div>
     <div class="scan-label">Tap to scan item</div>
-    <div class="scan-sub">Takes photo - detects barcode - checks prices</div>
+    <div class="scan-sub">Takes photo &middot; detects barcode &middot; checks prices</div>
     <input type="file" id="fileInput" accept="image/*" capture="environment">
   </div>
   <img id="previewImg" class="preview-img" alt="Item preview">
@@ -78,7 +78,7 @@
     </div>
     <div id="verdictBox" class="verdict" style="display:none"></div>
     <div class="card" id="priceCard" style="display:none">
-      <div class="card-title">Amazon Pricing (Keepa)</div>
+      <div class="card-title">Amazon Pricing</div>
       <div id="priceRows"></div>
     </div>
     <div class="card" id="marginCard" style="display:none">
@@ -86,87 +86,53 @@
       <div id="marginRows"></div>
     </div>
     <div class="card" id="linkupCard" style="display:none">
-      <div class="card-title">Web Price Search (Linkup)</div>
+      <div class="card-title">Price Research</div>
       <div class="linkup-answer" id="linkupAnswer"></div>
       <div id="linkupSources"></div>
     </div>
-    <button class="reset-btn" onclick="reset()">Scan another item</button>
+    <button class="reset-btn" onclick="reset()">&#128260; Scan another item</button>
   </div>
 </div>
 <script>
 var imageB64 = '';
 var detectedUPC = '';
-
 function compressToJpeg(img) {
   try {
-    var max = 900;
-    var w = img.naturalWidth || img.width;
-    var h = img.naturalHeight || img.height;
+    var max = 900, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
     if (!w || !h) return null;
-    if (w > max || h > max) {
-      if (w > h) { h = Math.round(h * max / w); w = max; }
-      else { w = Math.round(w * max / h); h = max; }
-    }
-    var canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    var result = canvas.toDataURL('image/jpeg', 0.75);
-    return (result && result.length > 100) ? result : null;
-  } catch (e) { return null; }
+    if (w > max || h > max) { if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    var r = c.toDataURL('image/jpeg', 0.75);
+    return (r && r.length > 100) ? r : null;
+  } catch(e) { return null; }
 }
-
 document.getElementById('fileInput').addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  imageB64 = '';
-  detectedUPC = '';
+  var file = e.target.files[0]; if (!file) return;
+  imageB64 = ''; detectedUPC = '';
   document.getElementById('scanBtn').disabled = true;
   document.getElementById('scanBtn').textContent = 'Reading photo...';
   var reader = new FileReader();
-  reader.onerror = function() {
-    document.getElementById('scanBtn').textContent = 'Could not read file. Try again.';
-  };
+  reader.onerror = function() { document.getElementById('scanBtn').textContent = 'Could not read file. Try again.'; };
   reader.onload = function(ev) {
     var dataUrl = ev.target.result;
-    var prev = document.getElementById('previewImg');
-    prev.src = dataUrl;
-    prev.style.display = 'block';
+    var prev = document.getElementById('previewImg'); prev.src = dataUrl; prev.style.display = 'block';
     tryBarcodeDetect(dataUrl);
     var img = new Image();
     img.onerror = function() {
-      if (dataUrl.length < 5000000) {
-        imageB64 = dataUrl;
-        document.getElementById('scanBtn').disabled = false;
-        document.getElementById('scanBtn').textContent = 'Check Resale Value';
-      } else {
-        document.getElementById('scanBtn').textContent = 'Photo too large. Try a closer photo.';
-      }
+      if (dataUrl.length < 5000000) { imageB64 = dataUrl; document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Check Resale Value'; }
+      else { document.getElementById('scanBtn').textContent = 'Photo too large. Try a closer photo.'; }
     };
-    img.onload = function() {
-      var compressed = compressToJpeg(img);
-      imageB64 = compressed || dataUrl;
-      document.getElementById('scanBtn').disabled = false;
-      document.getElementById('scanBtn').textContent = 'Check Resale Value';
-    };
+    img.onload = function() { imageB64 = compressToJpeg(img) || dataUrl; document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Check Resale Value'; };
     img.src = dataUrl;
   };
   reader.readAsDataURL(file);
 });
-
 function tryBarcodeDetect(dataUrl) {
-  try {
-    Quagga.decodeSingle({
-      decoder: { readers: ['ean_reader','upc_reader','upc_e_reader','code_128_reader','code_39_reader'] },
-      locate: true, src: dataUrl
-    }, function(result) {
-      if (result && result.codeResult) {
-        detectedUPC = result.codeResult.code;
-        document.getElementById('scanBtn').textContent = 'Barcode: ' + detectedUPC + ' - Check Value';
-      }
-    });
-  } catch(e) {}
+  try { Quagga.decodeSingle({ decoder: { readers: ['ean_reader','upc_reader','upc_e_reader','code_128_reader','code_39_reader'] }, locate: true, src: dataUrl }, function(result) {
+    if (result && result.codeResult) { detectedUPC = result.codeResult.code; document.getElementById('scanBtn').textContent = 'Barcode: ' + detectedUPC + ' - Check Value'; }
+  }); } catch(e) {}
 }
-
 function doScan() {
   if (!imageB64) return;
   var cost = parseFloat(document.getElementById('costInput').value) || 0;
@@ -174,52 +140,27 @@ function doScan() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('status').style.display = 'block';
   document.getElementById('statusText').textContent = 'Identifying item...';
-  var steps = ['Identifying item...','Looking up prices...','Calculating margins...'];
-  var si = 0;
-  var interval = setInterval(function() {
-    si++;
-    if (si < steps.length) document.getElementById('statusText').textContent = steps[si];
-  }, 3000);
-  fetch('/scan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: imageB64, upc: detectedUPC, cost_paid: cost })
-  }).then(function(resp) {
-    return resp.text().then(function(text) {
-      clearInterval(interval);
-      document.getElementById('status').style.display = 'none';
-      try {
-        showResults(JSON.parse(text), cost);
-      } catch(e) {
-        document.getElementById('statusText').textContent = 'Server error (HTTP ' + resp.status + '). Try again.';
-        document.getElementById('status').style.display = 'block';
-        document.getElementById('scanBtn').disabled = false;
-      }
-    });
-  }).catch(function(err) {
-    clearInterval(interval);
-    document.getElementById('status').style.display = 'none';
+  var steps = ['Identifying item...','Looking up prices...','Calculating margins...'], si = 0;
+  var interval = setInterval(function() { si++; if (si < steps.length) document.getElementById('statusText').textContent = steps[si]; }, 3000);
+  fetch('/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: imageB64, upc: detectedUPC, cost_paid: cost }) })
+  .then(function(resp) { return resp.text().then(function(text) {
+    clearInterval(interval); document.getElementById('status').style.display = 'none';
+    try { showResults(JSON.parse(text), cost); } catch(e) {
+      document.getElementById('statusText').textContent = 'Server error (HTTP ' + resp.status + '). Try again.';
+      document.getElementById('status').style.display = 'block'; document.getElementById('scanBtn').disabled = false;
+    }
+  }); }).catch(function() {
+    clearInterval(interval); document.getElementById('status').style.display = 'none';
     document.getElementById('statusText').textContent = 'Connection error. Check internet and try again.';
-    document.getElementById('status').style.display = 'block';
-    document.getElementById('scanBtn').disabled = false;
+    document.getElementById('status').style.display = 'block'; document.getElementById('scanBtn').disabled = false;
   });
 }
-
 function showResults(data, cost) {
   document.getElementById('results').style.display = 'block';
   var ident = data.identification || {};
-  if (ident.error) {
-    document.getElementById('itemName').textContent = 'Could not identify item';
-    document.getElementById('itemBrand').textContent = ident.error;
-  } else if (ident.name) {
-    document.getElementById('itemName').textContent = ident.name;
-    document.getElementById('itemBrand').textContent = ident.brand || '';
-  } else if (ident.description) {
-    document.getElementById('itemName').textContent = ident.description.split('\n')[0].substring(0, 80);
-    document.getElementById('itemBrand').textContent = ident.source === 'claude_vision' ? '(AI identified)' : '';
-  } else {
-    document.getElementById('itemName').textContent = 'Item scanned';
-  }
+  if (ident.error) { document.getElementById('itemName').textContent = 'Could not identify item'; document.getElementById('itemBrand').textContent = ident.error; }
+  else if (ident.name) { document.getElementById('itemName').textContent = ident.name; document.getElementById('itemBrand').textContent = ident.brand || (ident.source === 'claude_vision' ? 'AI identified' : ''); }
+  else { document.getElementById('itemName').textContent = 'Item scanned'; }
   var keepa = data.keepa || {};
   if (keepa.found) {
     var rows = [];
@@ -227,67 +168,34 @@ function showResults(data, cost) {
     if (keepa.amazon_price) rows.push(['Amazon Direct','$'+keepa.amazon_price]);
     if (keepa.new_3p_price) rows.push(['New 3P Seller','$'+keepa.new_3p_price]);
     if (keepa.avg_new_90d) rows.push(['Avg New (90d)','$'+keepa.avg_new_90d]);
-    if (rows.length) {
-      document.getElementById('priceCard').style.display = 'block';
-      document.getElementById('priceRows').innerHTML = rows.map(function(r) {
-        return '<div class="price-row"><span class="price-label">'+r[0]+'</span><span class="price-val">'+r[1]+'</span></div>';
-      }).join('');
-    }
+    if (rows.length) { document.getElementById('priceCard').style.display = 'block'; document.getElementById('priceRows').innerHTML = rows.map(function(r) { return '<div class="price-row"><span class="price-label">'+r[0]+'</span><span class="price-val">'+r[1]+'</span></div>'; }).join(''); }
   }
   var margin = data.margin || {};
   if (margin.sell_price) {
     document.getElementById('marginCard').style.display = 'block';
-    var net = margin.net_profit;
-    var netClass = net > 5 ? 'green' : net > 0 ? 'yellow' : 'red';
-    document.getElementById('marginRows').innerHTML =
-      '<div class="price-row"><span class="price-label">Sell price</span><span class="price-val">$'+margin.sell_price+'</span></div>'+
-      '<div class="price-row"><span class="price-label">Est. fees (15%)</span><span class="price-val red">-$'+margin.estimated_fees+'</span></div>'+
-      '<div class="price-row"><span class="price-label">Est. shipping</span><span class="price-val red">-$'+margin.estimated_shipping+'</span></div>'+
-      '<div class="price-row"><span class="price-label">Your cost</span><span class="price-val red">-$'+margin.cost_paid+'</span></div>'+
-      '<div class="price-row"><span class="price-label">Net profit</span><span class="price-val '+netClass+'">$'+net+(margin.roi_pct?' ('+margin.roi_pct+'% ROI)':'')+'</span></div>';
-    var v = document.getElementById('verdictBox');
-    v.style.display = 'block';
-    if (net > 10) { v.className = 'verdict buy'; v.textContent = 'BUY IT'; }
-    else if (net > 0) { v.className = 'verdict maybe'; v.textContent = 'THIN MARGIN'; }
-    else { v.className = 'verdict pass'; v.textContent = 'PASS'; }
+    var net = margin.net_profit, netClass = net > 5 ? 'green' : net > 0 ? 'yellow' : 'red';
+    document.getElementById('marginRows').innerHTML = '<div class="price-row"><span class="price-label">Sell price</span><span class="price-val">$'+margin.sell_price+'</span></div><div class="price-row"><span class="price-label">Est. fees (15%)</span><span class="price-val red">-$'+margin.estimated_fees+'</span></div><div class="price-row"><span class="price-label">Est. shipping</span><span class="price-val red">-$'+margin.estimated_shipping+'</span></div><div class="price-row"><span class="price-label">Your cost</span><span class="price-val red">-$'+margin.cost_paid+'</span></div><div class="price-row"><span class="price-label">Net profit</span><span class="price-val '+netClass+'">$'+net+(margin.roi_pct?' ('+margin.roi_pct+'% ROI)':'')+'</span></div>';
+    var v = document.getElementById('verdictBox'); v.style.display = 'block';
+    if (net > 10) { v.className = 'verdict buy'; v.textContent = 'BUY IT'; } else if (net > 0) { v.className = 'verdict maybe'; v.textContent = 'THIN MARGIN'; } else { v.className = 'verdict pass'; v.textContent = 'PASS'; }
   }
   var linkup = data.linkup || {};
+  document.getElementById('linkupCard').style.display = 'block';
   if (linkup.answer) {
-    document.getElementById('linkupCard').style.display = 'block';
     document.getElementById('linkupAnswer').textContent = linkup.answer;
-    if (linkup.sources && linkup.sources.length) {
-      document.getElementById('linkupSources').innerHTML = linkup.sources.map(function(s) {
-        return '<a class="source-link" href="'+s.url+'" target="_blank">'+(s.name||s.url)+'</a>';
-      }).join('');
-    }
-  } else if (!linkup.configured) {
-    document.getElementById('linkupCard').style.display = 'block';
-    document.getElementById('linkupAnswer').textContent = linkup.message || 'Linkup not configured.';
-  }
-  document.getElementById('scanBtn').disabled = false;
-  document.getElementById('scanBtn').textContent = 'Scan Again';
+    if (linkup.sources && linkup.sources.length) { document.getElementById('linkupSources').innerHTML = linkup.sources.map(function(s) { return '<a class="source-link" href="'+s.url+'" target="_blank">'+(s.name||s.url)+'</a>'; }).join(''); }
+  } else { document.getElementById('linkupAnswer').textContent = linkup.message || linkup.error || 'No pricing data found.'; }
+  document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Scan Again';
 }
-
 function reset() {
-  imageB64 = '';
-  detectedUPC = '';
-  document.getElementById('previewImg').style.display = 'none';
-  document.getElementById('previewImg').src = '';
-  document.getElementById('fileInput').value = '';
-  document.getElementById('results').style.display = 'none';
+  imageB64 = ''; detectedUPC = '';
+  document.getElementById('previewImg').style.display = 'none'; document.getElementById('previewImg').src = '';
+  document.getElementById('fileInput').value = ''; document.getElementById('results').style.display = 'none';
   document.getElementById('status').style.display = 'none';
-  document.getElementById('scanBtn').disabled = true;
-  document.getElementById('scanBtn').textContent = 'Select an item first';
+  document.getElementById('scanBtn').disabled = true; document.getElementById('scanBtn').textContent = 'Select an item first';
   document.getElementById('costInput').value = '';
-  document.getElementById('verdictBox').style.display = 'none';
-  document.getElementById('priceCard').style.display = 'none';
-  document.getElementById('marginCard').style.display = 'none';
-  document.getElementById('linkupCard').style.display = 'none';
+  ['verdictBox','priceCard','marginCard','linkupCard'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
 }
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js').catch(function() {});
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js').catch(function() {}); }
 </script>
 </body>
 </html>
