@@ -1,6 +1,4 @@
 import os
-import base64
-import re
 import requests
 from flask import Flask, request, jsonify, send_from_directory
 from anthropic import Anthropic
@@ -23,11 +21,14 @@ def lookup_upc(upc):
         data = r.json()
         if data.get('items'):
             item = data['items'][0]
+            name = item.get('title', '')
+            brand = item.get('brand', '')
             return {
                 'found': True,
-                'name': item.get('title', ''),
-                'brand': item.get('brand', ''),
+                'name': name,
+                'brand': brand,
                 'description': item.get('description', ''),
+                'search_query': f'{brand} {name}'.strip(),
                 'upc': upc
             }
     except Exception:
@@ -39,13 +40,12 @@ def identify_with_claude(image_b64):
     if not ANTHROPIC_API_KEY:
         return {'error': 'Anthropic API key not configured'}
     try:
-        # Strip data URL prefix if present
         if ',' in image_b64:
             image_b64 = image_b64.split(',', 1)[1]
 
         response = client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=512,
+            max_tokens=300,
             messages=[{
                 'role': 'user',
                 'content': [
@@ -59,27 +59,52 @@ def identify_with_claude(image_b64):
                     },
                     {
                         'type': 'text',
-                        'text': 'Identify this item precisely. Give me: (1) Product name, (2) Brand, (3) Model/version if visible, (4) Condition (new/used/sealed), (5) A short search query I could use to find sold prices on eBay. Be specific and concise.'
+                        'text': '''Identify this product for resale pricing. Reply in EXACTLY this format:
+PRODUCT: [full product name including size or quantity]
+BRAND: [brand name]
+SEARCH: [search query to find this item on Amazon or eBay - brand + product + size, no condition words]
+
+Example:
+PRODUCT: Speed Stick Regular Deodorant 3oz
+BRAND: Mennen
+SEARCH: Speed Stick Regular Deodorant 3oz'''
                     }
                 ]
             }]
         )
-        text = response.content[0].text
-        return {'found': True, 'description': text, 'source': 'claude_vision'}
+        text = response.content[0].text.strip()
+
+        product = ''
+        brand = ''
+        search = ''
+        for line in text.split('\n'):
+            if line.startswith('PRODUCT:'):
+                product = line[8:].strip()
+            elif line.startswith('BRAND:'):
+                brand = line[6:].strip()
+            elif line.startswith('SEARCH:'):
+                search = line[7:].strip()
+
+        return {
+            'found': True,
+            'name': product or text.split('\n')[0][:80],
+            'brand': brand,
+            'search_query': search or product,
+            'source': 'claude_vision'
+        }
     except Exception as e:
         return {'error': str(e)}
 
 def get_keepa_data(upc):
     """Get Amazon pricing and sales rank history from Keepa."""
     if not KEEPA_API_KEY:
-        return {'configured': False, 'message': 'Keepa not configured — add KEEPA_API_KEY to use Amazon pricing data'}
+        return {'configured': False, 'message': 'Keepa not configured'}
     try:
-        # Search by UPC
         r = requests.get(
             'https://api.keepa.com/product',
             params={
                 'key': KEEPA_API_KEY,
-                'domain': 1,  # amazon.com
+                'domain': 1,
                 'code': upc,
                 'stats': 90,
                 'history': 0
@@ -92,9 +117,7 @@ def get_keepa_data(upc):
 
         product = data['products'][0]
         stats = product.get('stats', {})
-        csv = product.get('csv', [])
 
-        # Extract current prices (Keepa stores prices as integers * 100, -1 = unavailable)
         def price(val):
             return round(val / 100, 2) if val and val != -1 else None
 
@@ -125,15 +148,15 @@ def get_keepa_data(upc):
         return {'configured': True, 'error': str(e)}
 
 def get_linkup_data(query):
-    """Search for sold prices using Linkup API."""
+    """Search for pricing using Linkup API."""
     if not LINKUP_API_KEY:
-        return {'configured': False, 'message': 'Linkup not configured — add LINKUP_API_KEY to use web price search'}
+        return {'configured': False, 'message': 'Linkup not configured'}
     try:
         r = requests.post(
             'https://api.linkup.so/v1/search',
             headers={'Authorization': f'Bearer {LINKUP_API_KEY}', 'Content-Type': 'application/json'},
             json={
-                'q': f'{query} sold price eBay Poshmark Mercari resale value',
+                'q': f'{query} retail price Amazon eBay sold listing resale value',
                 'depth': 'standard',
                 'outputType': 'sourcedAnswer'
             },
@@ -160,7 +183,7 @@ def health():
 def scan():
     data = request.get_json()
     image_b64 = data.get('image', '')
-    upc = data.get('upc', '')  # client-side barcode detection result
+    upc = data.get('upc', '')
     cost_paid = data.get('cost_paid', 0)
 
     result = {
@@ -170,33 +193,29 @@ def scan():
         'margin': {}
     }
 
-    # Step 1: Identify the item
     if upc:
         upc_result = lookup_upc(upc)
         if upc_result['found']:
             result['identification'] = upc_result
-            search_query = f"{upc_result.get('brand', '')} {upc_result.get('name', '')}".strip()
+            search_query = upc_result.get('search_query', '')
         else:
-            # UPC lookup failed, fall back to vision
             vision = identify_with_claude(image_b64)
             result['identification'] = vision
-            search_query = vision.get('description', '')[:200]
+            search_query = vision.get('search_query') or vision.get('description', '')[:150]
     elif image_b64:
         vision = identify_with_claude(image_b64)
         result['identification'] = vision
-        search_query = vision.get('description', '')[:200]
+        search_query = vision.get('search_query') or vision.get('description', '')[:150]
     else:
         return jsonify({'error': 'No image or UPC provided'}), 400
 
-    # Step 2: Get pricing data
     if upc:
         result['keepa'] = get_keepa_data(upc)
     else:
-        result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False, 'note': 'Keepa requires UPC/barcode'}
+        result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False, 'note': 'Amazon data requires barcode scan'}
 
     result['linkup'] = get_linkup_data(search_query)
 
-    # Step 3: Margin calculation
     sell_price = None
     if result['keepa'].get('buy_box'):
         sell_price = result['keepa']['buy_box']
@@ -204,7 +223,7 @@ def scan():
         sell_price = result['keepa']['avg_new_90d']
 
     if sell_price and cost_paid:
-        fees = sell_price * 0.15  # ~15% platform fees estimate
+        fees = sell_price * 0.15
         shipping = 4.00
         net = sell_price - fees - shipping - float(cost_paid)
         result['margin'] = {
