@@ -8,194 +8,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; font-size: 16px; }
+  body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
   .container { max-width: 480px; margin: 0 auto; padding: 20px; }
   h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 4px; }
   .subtitle { font-size: 15px; color: #666; margin-bottom: 24px; }
-  .scan-area { background: #1a1a1a; border: 2px dashed #333; border-radius: 16px; padding: 36px 20px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: border-color 0.2s; }
-  .scan-area:hover { border-color: #555; }
-  .scan-icon { font-size: 56px; margin-bottom: 12px; }
-  .scan-label { font-size: 18px; color: #aaa; margin-bottom: 6px; }
+  .scan-area { background: #1a1a1a; border: 2px dashed #333; border-radius: 16px; padding: 36px 20px; text-align: center; margin-bottom: 20px; cursor: pointer; }
+  .scan-icon { font-size: 52px; margin-bottom: 10px; }
+  .scan-label { font-size: 18px; color: #aaa; margin-bottom: 4px; }
   .scan-sub { font-size: 14px; color: #555; }
   #fileInput { display: none; }
   .cost-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .cost-row label { font-size: 16px; color: #aaa; white-space: nowrap; }
-  .cost-row input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 18px; outline: none; }
-  .cost-row input:focus { border-color: #555; }
-  .scan-btn { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 18px; font-size: 19px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-  .scan-btn:hover { background: #1d4ed8; }
+  .cost-row label { font-size: 17px; color: #aaa; white-space: nowrap; }
+  .cost-row input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 20px; outline: none; }
+  .scan-btn { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 18px; font-size: 19px; font-weight: 600; cursor: pointer; }
   .scan-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-  .status { text-align: center; padding: 24px; color: #888; font-size: 16px; display: none; }
+  .status { text-align: center; padding: 28px; color: #aaa; font-size: 17px; display: none; }
   .spinner { display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .results { display: none; }
-  .card { background: #1a1a1a; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
-  .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin-bottom: 12px; }
-  .item-name { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 6px; line-height: 1.3; }
-  .item-brand { font-size: 15px; color: #888; }
-  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #222; }
-  .price-row:last-child { border-bottom: none; }
-  .price-label { font-size: 15px; color: #888; }
-  .price-val { font-size: 17px; font-weight: 600; color: #fff; }
-  .price-val.green { color: #22c55e; }
-  .price-val.red { color: #ef4444; }
-  .price-val.yellow { color: #eab308; }
-  .verdict { text-align: center; padding: 18px; border-radius: 12px; font-size: 22px; font-weight: 700; margin-bottom: 14px; letter-spacing: 1px; }
+  .verdict { text-align: center; padding: 22px 20px 18px; border-radius: 14px; margin-bottom: 16px; }
+  .verdict .v-label { font-size: 36px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; }
+  .verdict .v-reason { font-size: 16px; line-height: 1.5; opacity: 0.85; }
   .verdict.buy { background: #14532d; color: #22c55e; }
   .verdict.pass { background: #450a0a; color: #ef4444; }
   .verdict.maybe { background: #422006; color: #eab308; }
-  .linkup-answer { font-size: 15px; color: #ccc; line-height: 1.7; }
-  .source-link { display: inline-block; margin-top: 8px; font-size: 13px; color: #2563eb; text-decoration: none; margin-right: 10px; }
+  .card { background: #1a1a1a; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 14px; }
+  .item-name { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3; }
+  .item-brand { font-size: 16px; color: #888; }
+  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+  .price-row:last-child { border-bottom: none; }
+  .price-label { font-size: 16px; color: #999; }
+  .price-val { font-size: 18px; font-weight: 600; }
+  .price-val.white { color: #fff; }
+  .price-val.green { color: #22c55e; }
+  .price-val.red { color: #ef4444; }
+  .price-val.yellow { color: #eab308; }
+  .source-row { margin-top: 12px; }
+  .source-link { display: inline-block; font-size: 13px; color: #2563eb; text-decoration: none; margin-right: 12px; margin-top: 4px; }
   .preview-img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 14px; display: none; }
-  .reset-btn { width: 100%; background: #1a1a1a; color: #888; border: 1px solid #333; border-radius: 12px; padding: 14px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+  .reset-btn { width: 100%; background: #1a1a1a; color: #888; border: 1px solid #333; border-radius: 12px; padding: 14px; font-size: 16px; cursor: pointer; margin-top: 6px; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>&#128230; Reseller Scanner</h1>
   <p class="subtitle">Scan any item to check resale value</p>
-  <div id="scanArea" class="scan-area" onclick="document.getElementById('fileInput').click()">
+  <div class="scan-area" onclick="document.getElementById('fileInput').click()">
     <div class="scan-icon">&#128247;</div>
     <div class="scan-label">Tap to scan item</div>
-    <div class="scan-sub">Takes photo &middot; detects barcode &middot; checks prices</div>
+    <div class="scan-sub">Photo &middot; auto barcode &middot; price check</div>
     <input type="file" id="fileInput" accept="image/*" capture="environment">
   </div>
-  <img id="previewImg" class="preview-img" alt="Item preview">
+  <img id="previewImg" class="preview-img" alt="">
   <div class="cost-row">
     <label>I paid $</label>
     <input type="number" id="costInput" placeholder="0.00" step="0.01" min="0">
   </div>
   <button class="scan-btn" id="scanBtn" onclick="doScan()" disabled>Select an item first</button>
-  <div class="status" id="status">
-    <span class="spinner"></span>
-    <span id="statusText">Scanning...</span>
-  </div>
+  <div class="status" id="status"><span class="spinner"></span><span id="statusText">Scanning...</span></div>
   <div class="results" id="results">
-    <div class="card" id="identCard">
+    <div class="card">
       <div class="card-title">Item Identified</div>
       <div class="item-name" id="itemName">-</div>
       <div class="item-brand" id="itemBrand"></div>
     </div>
-    <div id="verdictBox" class="verdict" style="display:none"></div>
-    <div class="card" id="priceCard" style="display:none">
-      <div class="card-title">Amazon Pricing</div>
+    <div class="verdict" id="verdictBox" style="display:none">
+      <div class="v-label" id="verdictLabel"></div>
+      <div class="v-reason" id="verdictReason"></div>
+    </div>
+    <div class="card" id="pricesCard" style="display:none">
+      <div class="card-title">Prices</div>
       <div id="priceRows"></div>
+      <div class="source-row" id="sourcesRow"></div>
     </div>
     <div class="card" id="marginCard" style="display:none">
-      <div class="card-title">Margin Calculator</div>
+      <div class="card-title">Margin (Amazon data)</div>
       <div id="marginRows"></div>
-    </div>
-    <div class="card" id="linkupCard" style="display:none">
-      <div class="card-title">Price Research</div>
-      <div class="linkup-answer" id="linkupAnswer"></div>
-      <div id="linkupSources"></div>
     </div>
     <button class="reset-btn" onclick="reset()">&#128260; Scan another item</button>
   </div>
 </div>
 <script>
-var imageB64 = '';
-var detectedUPC = '';
-function compressToJpeg(img) {
-  try {
-    var max = 900, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-    if (!w || !h) return null;
-    if (w > max || h > max) { if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
-    var c = document.createElement('canvas'); c.width = w; c.height = h;
-    c.getContext('2d').drawImage(img, 0, 0, w, h);
-    var r = c.toDataURL('image/jpeg', 0.75);
-    return (r && r.length > 100) ? r : null;
-  } catch(e) { return null; }
-}
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  var file = e.target.files[0]; if (!file) return;
-  imageB64 = ''; detectedUPC = '';
-  document.getElementById('scanBtn').disabled = true;
-  document.getElementById('scanBtn').textContent = 'Reading photo...';
-  var reader = new FileReader();
-  reader.onerror = function() { document.getElementById('scanBtn').textContent = 'Could not read file. Try again.'; };
-  reader.onload = function(ev) {
-    var dataUrl = ev.target.result;
-    var prev = document.getElementById('previewImg'); prev.src = dataUrl; prev.style.display = 'block';
-    tryBarcodeDetect(dataUrl);
-    var img = new Image();
-    img.onerror = function() {
-      if (dataUrl.length < 5000000) { imageB64 = dataUrl; document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Check Resale Value'; }
-      else { document.getElementById('scanBtn').textContent = 'Photo too large. Try a closer photo.'; }
-    };
-    img.onload = function() { imageB64 = compressToJpeg(img) || dataUrl; document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Check Resale Value'; };
-    img.src = dataUrl;
-  };
-  reader.readAsDataURL(file);
-});
-function tryBarcodeDetect(dataUrl) {
-  try { Quagga.decodeSingle({ decoder: { readers: ['ean_reader','upc_reader','upc_e_reader','code_128_reader','code_39_reader'] }, locate: true, src: dataUrl }, function(result) {
-    if (result && result.codeResult) { detectedUPC = result.codeResult.code; document.getElementById('scanBtn').textContent = 'Barcode: ' + detectedUPC + ' - Check Value'; }
-  }); } catch(e) {}
-}
-function doScan() {
-  if (!imageB64) return;
-  var cost = parseFloat(document.getElementById('costInput').value) || 0;
-  document.getElementById('scanBtn').disabled = true;
-  document.getElementById('results').style.display = 'none';
-  document.getElementById('status').style.display = 'block';
-  document.getElementById('statusText').textContent = 'Identifying item...';
-  var steps = ['Identifying item...','Looking up prices...','Calculating margins...'], si = 0;
-  var interval = setInterval(function() { si++; if (si < steps.length) document.getElementById('statusText').textContent = steps[si]; }, 3000);
-  fetch('/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: imageB64, upc: detectedUPC, cost_paid: cost }) })
-  .then(function(resp) { return resp.text().then(function(text) {
-    clearInterval(interval); document.getElementById('status').style.display = 'none';
-    try { showResults(JSON.parse(text), cost); } catch(e) {
-      document.getElementById('statusText').textContent = 'Server error (HTTP ' + resp.status + '). Try again.';
-      document.getElementById('status').style.display = 'block'; document.getElementById('scanBtn').disabled = false;
-    }
-  }); }).catch(function() {
-    clearInterval(interval); document.getElementById('status').style.display = 'none';
-    document.getElementById('statusText').textContent = 'Connection error. Check internet and try again.';
-    document.getElementById('status').style.display = 'block'; document.getElementById('scanBtn').disabled = false;
-  });
-}
-function showResults(data, cost) {
-  document.getElementById('results').style.display = 'block';
-  var ident = data.identification || {};
-  if (ident.error) { document.getElementById('itemName').textContent = 'Could not identify item'; document.getElementById('itemBrand').textContent = ident.error; }
-  else if (ident.name) { document.getElementById('itemName').textContent = ident.name; document.getElementById('itemBrand').textContent = ident.brand || (ident.source === 'claude_vision' ? 'AI identified' : ''); }
-  else { document.getElementById('itemName').textContent = 'Item scanned'; }
-  var keepa = data.keepa || {};
-  if (keepa.found) {
-    var rows = [];
-    if (keepa.buy_box) rows.push(['Buy Box','$'+keepa.buy_box]);
-    if (keepa.amazon_price) rows.push(['Amazon Direct','$'+keepa.amazon_price]);
-    if (keepa.new_3p_price) rows.push(['New 3P Seller','$'+keepa.new_3p_price]);
-    if (keepa.avg_new_90d) rows.push(['Avg New (90d)','$'+keepa.avg_new_90d]);
-    if (rows.length) { document.getElementById('priceCard').style.display = 'block'; document.getElementById('priceRows').innerHTML = rows.map(function(r) { return '<div class="price-row"><span class="price-label">'+r[0]+'</span><span class="price-val">'+r[1]+'</span></div>'; }).join(''); }
-  }
-  var margin = data.margin || {};
-  if (margin.sell_price) {
-    document.getElementById('marginCard').style.display = 'block';
-    var net = margin.net_profit, netClass = net > 5 ? 'green' : net > 0 ? 'yellow' : 'red';
-    document.getElementById('marginRows').innerHTML = '<div class="price-row"><span class="price-label">Sell price</span><span class="price-val">$'+margin.sell_price+'</span></div><div class="price-row"><span class="price-label">Est. fees (15%)</span><span class="price-val red">-$'+margin.estimated_fees+'</span></div><div class="price-row"><span class="price-label">Est. shipping</span><span class="price-val red">-$'+margin.estimated_shipping+'</span></div><div class="price-row"><span class="price-label">Your cost</span><span class="price-val red">-$'+margin.cost_paid+'</span></div><div class="price-row"><span class="price-label">Net profit</span><span class="price-val '+netClass+'">$'+net+(margin.roi_pct?' ('+margin.roi_pct+'% ROI)':'')+'</span></div>';
-    var v = document.getElementById('verdictBox'); v.style.display = 'block';
-    if (net > 10) { v.className = 'verdict buy'; v.textContent = 'BUY IT'; } else if (net > 0) { v.className = 'verdict maybe'; v.textContent = 'THIN MARGIN'; } else { v.className = 'verdict pass'; v.textContent = 'PASS'; }
-  }
-  var linkup = data.linkup || {};
-  document.getElementById('linkupCard').style.display = 'block';
-  if (linkup.answer) {
-    document.getElementById('linkupAnswer').textContent = linkup.answer;
-    if (linkup.sources && linkup.sources.length) { document.getElementById('linkupSources').innerHTML = linkup.sources.map(function(s) { return '<a class="source-link" href="'+s.url+'" target="_blank">'+(s.name||s.url)+'</a>'; }).join(''); }
-  } else { document.getElementById('linkupAnswer').textContent = linkup.message || linkup.error || 'No pricing data found.'; }
-  document.getElementById('scanBtn').disabled = false; document.getElementById('scanBtn').textContent = 'Scan Again';
-}
-function reset() {
-  imageB64 = ''; detectedUPC = '';
-  document.getElementById('previewImg').style.display = 'none'; document.getElementById('previewImg').src = '';
-  document.getElementById('fileInput').value = ''; document.getElementById('results').style.display = 'none';
-  document.getElementById('status').style.display = 'none';
-  document.getElementById('scanBtn').disabled = true; document.getElementById('scanBtn').textContent = 'Select an item first';
-  document.getElementById('costInput').value = '';
-  ['verdictBox','priceCard','marginCard','linkupCard'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
-}
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js').catch(function() {}); }
+var imageB64='',detectedUPC='';
+function compressToJpeg(img){try{var max=900,w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);var r=c.toDataURL('image/jpeg',0.75);return(r&&r.length>100)?r:null;}catch(e){return null;}}
+document.getElementById('fileInput').addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;imageB64='';detectedUPC='';document.getElementById('scanBtn').disabled=true;document.getElementById('scanBtn').textContent='Reading photo...';var reader=new FileReader();reader.onerror=function(){document.getElementById('scanBtn').textContent='Could not read. Try again.';};reader.onload=function(ev){var dataUrl=ev.target.result;var prev=document.getElementById('previewImg');prev.src=dataUrl;prev.style.display='block';tryBarcodeDetect(dataUrl);var img=new Image();img.onerror=function(){if(dataUrl.length<5000000){imageB64=dataUrl;ready();}else{document.getElementById('scanBtn').textContent='Photo too large. Try again.';}};img.onload=function(){imageB64=compressToJpeg(img)||dataUrl;ready();};img.src=dataUrl;};reader.readAsDataURL(file);});
+function ready(){document.getElementById('scanBtn').disabled=false;if(!detectedUPC)document.getElementById('scanBtn').textContent='Check Resale Value';}
+function tryBarcodeDetect(dataUrl){try{Quagga.decodeSingle({decoder:{readers:['ean_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true,src:dataUrl},function(result){if(result&&result.codeResult){detectedUPC=result.codeResult.code;document.getElementById('scanBtn').textContent='Barcode found - Check Value';}});}catch(e){}}
+function doScan(){if(!imageB64)return;var cost=parseFloat(document.getElementById('costInput').value)||0;document.getElementById('scanBtn').disabled=true;document.getElementById('results').style.display='none';document.getElementById('status').style.display='block';document.getElementById('statusText').textContent='Identifying item...';var steps=['Identifying item...','Researching prices...','Generating verdict...'],si=0;var iv=setInterval(function(){si++;if(si<steps.length)document.getElementById('statusText').textContent=steps[si];},3500);fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:imageB64,upc:detectedUPC,cost_paid:cost})}).then(function(resp){return resp.text().then(function(txt){clearInterval(iv);document.getElementById('status').style.display='none';try{showResults(JSON.parse(txt),cost);}catch(e){document.getElementById('statusText').textContent='Server error. Try again.';document.getElementById('status').style.display='block';document.getElementById('scanBtn').disabled=false;}});}).catch(function(){clearInterval(iv);document.getElementById('status').style.display='none';document.getElementById('statusText').textContent='Connection error. Try again.';document.getElementById('status').style.display='block';document.getElementById('scanBtn').disabled=false;});}
+function showResults(data,cost){document.getElementById('results').style.display='block';var ident=data.identification||{};document.getElementById('itemName').textContent=ident.name||'Unknown item';document.getElementById('itemBrand').textContent=ident.brand||'';var v=data.verdict||{},keepa=data.keepa||{},margin=data.margin||{},vbox=document.getElementById('verdictBox'),vlabel=document.getElementById('verdictLabel'),vreason=document.getElementById('verdictReason');if(margin.net_profit!==undefined){var net=margin.net_profit;vbox.style.display='block';if(net>10){vbox.className='verdict buy';vlabel.textContent='BUY';}else if(net>0){vbox.className='verdict maybe';vlabel.textContent='MAYBE';}else{vbox.className='verdict pass';vlabel.textContent='PASS';}vreason.textContent='$'+net+' profit after fees & shipping'+(margin.roi_pct?' ('+margin.roi_pct+'% ROI)':'');}else if(v.verdict){vbox.style.display='block';if(v.verdict==='BUY'){vbox.className='verdict buy';vlabel.textContent='BUY';}else if(v.verdict==='MAYBE'){vbox.className='verdict maybe';vlabel.textContent='MAYBE';}else{vbox.className='verdict pass';vlabel.textContent='PASS';}vreason.textContent=v.reason||'';}var rows=[];if(v.retail&&v.retail!=='unknown')rows.push(['Retail (new)',v.retail,'white']);if(v.resale&&v.resale!=='no market')rows.push(['Resale / eBay',v.resale,'green']);if(keepa.buy_box)rows.push(['Amazon Buy Box','$'+keepa.buy_box,'white']);if(keepa.avg_new_90d)rows.push(['Amazon Avg (90d)','$'+keepa.avg_new_90d,'white']);var linkup=data.linkup||{};if(rows.length>0||(linkup.sources&&linkup.sources.length)){document.getElementById('pricesCard').style.display='block';document.getElementById('priceRows').innerHTML=rows.map(function(r){return '<div class="price-row"><span class="price-label">'+r[0]+'</span><span class="price-val '+r[2]+'">'+r[1]+'</span></div>';}).join('');if(linkup.sources&&linkup.sources.length){document.getElementById('sourcesRow').innerHTML=linkup.sources.map(function(s){return '<a class="source-link" href="'+s.url+'" target="_blank">'+(s.name||'Source')+'</a>';}).join('');}}if(margin.sell_price){document.getElementById('marginCard').style.display='block';var net2=margin.net_profit,nc=net2>5?'green':net2>0?'yellow':'red';document.getElementById('marginRows').innerHTML=row('Sell price','$'+margin.sell_price,'white')+row('Est. fees (15%)','-$'+margin.estimated_fees,'red')+row('Est. shipping','-$'+margin.estimated_shipping,'red')+row('Your cost','-$'+margin.cost_paid,'red')+row('Net profit','$'+net2,nc);}document.getElementById('scanBtn').disabled=false;document.getElementById('scanBtn').textContent='Scan Again';}
+function row(label,val,cls){return '<div class="price-row"><span class="price-label">'+label+'</span><span class="price-val '+cls+'">'+val+'</span></div>';}
+function reset(){imageB64='';detectedUPC='';document.getElementById('previewImg').style.display='none';document.getElementById('previewImg').src='';document.getElementById('fileInput').value='';document.getElementById('results').style.display='none';document.getElementById('status').style.display='none';document.getElementById('scanBtn').disabled=true;document.getElementById('scanBtn').textContent='Select an item first';document.getElementById('costInput').value='';['verdictBox','pricesCard','marginCard'].forEach(function(id){document.getElementById(id).style.display='none';});}
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/static/sw.js').catch(function(){});}
 </script>
 </body>
 </html>
