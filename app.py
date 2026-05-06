@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
-app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max upload
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 client = Anthropic()
 
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
@@ -15,7 +15,6 @@ KEEPA_API_KEY = os.environ.get('KEEPA_API_KEY', '')
 LINKUP_API_KEY = os.environ.get('LINKUP_API_KEY', '')
 
 def lookup_upc(upc):
-    """Look up product info from UPC using UPCitemdb."""
     try:
         r = requests.get(f'https://api.upcitemdb.com/prod/trial/lookup?upc={upc}', timeout=5)
         data = r.json()
@@ -27,7 +26,6 @@ def lookup_upc(upc):
                 'found': True,
                 'name': name,
                 'brand': brand,
-                'description': item.get('description', ''),
                 'search_query': f'{brand} {name}'.strip(),
                 'upc': upc
             }
@@ -36,7 +34,6 @@ def lookup_upc(upc):
     return {'found': False}
 
 def identify_with_claude(image_b64):
-    """Use Claude Haiku vision to identify the item."""
     if not ANTHROPIC_API_KEY:
         return {'error': 'Anthropic API key not configured'}
     try:
@@ -51,11 +48,7 @@ def identify_with_claude(image_b64):
                 'content': [
                     {
                         'type': 'image',
-                        'source': {
-                            'type': 'base64',
-                            'media_type': 'image/jpeg',
-                            'data': image_b64
-                        }
+                        'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': image_b64}
                     },
                     {
                         'type': 'text',
@@ -73,7 +66,6 @@ SEARCH: Speed Stick Regular Deodorant 3oz'''
             }]
         )
         text = response.content[0].text.strip()
-
         product = ''
         brand = ''
         search = ''
@@ -84,7 +76,6 @@ SEARCH: Speed Stick Regular Deodorant 3oz'''
                 brand = line[6:].strip()
             elif line.startswith('SEARCH:'):
                 search = line[7:].strip()
-
         return {
             'found': True,
             'name': product or text.split('\n')[0][:80],
@@ -96,19 +87,12 @@ SEARCH: Speed Stick Regular Deodorant 3oz'''
         return {'error': str(e)}
 
 def get_keepa_data(upc):
-    """Get Amazon pricing and sales rank history from Keepa."""
     if not KEEPA_API_KEY:
-        return {'configured': False, 'message': 'Keepa not configured'}
+        return {'configured': False}
     try:
         r = requests.get(
             'https://api.keepa.com/product',
-            params={
-                'key': KEEPA_API_KEY,
-                'domain': 1,
-                'code': upc,
-                'stats': 90,
-                'history': 0
-            },
+            params={'key': KEEPA_API_KEY, 'domain': 1, 'code': upc, 'stats': 90, 'history': 0},
             timeout=10
         )
         data = r.json()
@@ -122,14 +106,12 @@ def get_keepa_data(upc):
             return round(val / 100, 2) if val and val != -1 else None
 
         current = stats.get('current', [])
+        buy_box = price(current[18]) if len(current) > 18 else None
         amazon_price = price(current[0]) if len(current) > 0 else None
         new_3p_price = price(current[1]) if len(current) > 1 else None
-        used_price = price(current[2]) if len(current) > 2 else None
-        buy_box = price(current[18]) if len(current) > 18 else None
 
         avg90 = stats.get('avg90', [])
         avg_new = price(avg90[1]) if len(avg90) > 1 else None
-        avg_used = price(avg90[2]) if len(avg90) > 2 else None
 
         return {
             'configured': True,
@@ -138,19 +120,15 @@ def get_keepa_data(upc):
             'asin': product.get('asin', ''),
             'amazon_price': amazon_price,
             'new_3p_price': new_3p_price,
-            'used_price': used_price,
             'buy_box': buy_box,
             'avg_new_90d': avg_new,
-            'avg_used_90d': avg_used,
-            'sales_rank': product.get('salesRanks', {})
         }
     except Exception as e:
         return {'configured': True, 'error': str(e)}
 
 def get_linkup_data(query):
-    """Search for pricing using Linkup API."""
     if not LINKUP_API_KEY:
-        return {'configured': False, 'message': 'Linkup not configured'}
+        return {'configured': False}
     try:
         r = requests.post(
             'https://api.linkup.so/v1/search',
@@ -166,10 +144,49 @@ def get_linkup_data(query):
         return {
             'configured': True,
             'answer': data.get('answer', ''),
-            'sources': [{'name': s.get('name'), 'url': s.get('url')} for s in data.get('sources', [])[:5]]
+            'sources': [{'name': s.get('name'), 'url': s.get('url')} for s in data.get('sources', [])[:4]]
         }
     except Exception as e:
         return {'configured': True, 'error': str(e)}
+
+def analyze_verdict(product_name, linkup_answer, cost_paid):
+    """Use Claude to extract key prices and generate a verdict from Linkup research."""
+    if not ANTHROPIC_API_KEY or not linkup_answer:
+        return None
+    try:
+        cost_str = f'${cost_paid}' if cost_paid else 'unknown'
+        prompt = f'''Product: {product_name}
+Thrift store cost: {cost_str}
+Price research: {linkup_answer}
+
+Based on this research, reply in EXACTLY this format:
+RETAIL: [retail/new price, e.g. $12.99, or "unknown"]
+RESALE: [what it sells for on eBay/resale, e.g. $18.00, or "no market"]
+VERDICT: [BUY or PASS or MAYBE]
+REASON: [one sentence - why buy or pass, mention profit potential if known]'''
+
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=150,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        text = response.content[0].text.strip()
+        retail = ''
+        resale = ''
+        verdict = ''
+        reason = ''
+        for line in text.split('\n'):
+            if line.startswith('RETAIL:'):
+                retail = line[7:].strip()
+            elif line.startswith('RESALE:'):
+                resale = line[7:].strip()
+            elif line.startswith('VERDICT:'):
+                verdict = line[8:].strip().upper()
+            elif line.startswith('REASON:'):
+                reason = line[7:].strip()
+        return {'retail': retail, 'resale': resale, 'verdict': verdict, 'reason': reason}
+    except Exception:
+        return None
 
 @app.route('/')
 def index():
@@ -186,13 +203,9 @@ def scan():
     upc = data.get('upc', '')
     cost_paid = data.get('cost_paid', 0)
 
-    result = {
-        'identification': {},
-        'keepa': {},
-        'linkup': {},
-        'margin': {}
-    }
+    result = {'identification': {}, 'keepa': {}, 'linkup': {}, 'verdict': {}, 'margin': {}}
 
+    # Identify item
     if upc:
         upc_result = lookup_upc(upc)
         if upc_result['found']:
@@ -201,27 +214,24 @@ def scan():
         else:
             vision = identify_with_claude(image_b64)
             result['identification'] = vision
-            search_query = vision.get('search_query') or vision.get('description', '')[:150]
+            search_query = vision.get('search_query') or ''
     elif image_b64:
         vision = identify_with_claude(image_b64)
         result['identification'] = vision
-        search_query = vision.get('search_query') or vision.get('description', '')[:150]
+        search_query = vision.get('search_query') or ''
     else:
         return jsonify({'error': 'No image or UPC provided'}), 400
 
+    # Get pricing data
     if upc:
         result['keepa'] = get_keepa_data(upc)
     else:
-        result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False, 'note': 'Amazon data requires barcode scan'}
+        result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False}
 
     result['linkup'] = get_linkup_data(search_query)
 
-    sell_price = None
-    if result['keepa'].get('buy_box'):
-        sell_price = result['keepa']['buy_box']
-    elif result['keepa'].get('avg_new_90d'):
-        sell_price = result['keepa']['avg_new_90d']
-
+    # Margin from Keepa if available
+    sell_price = result['keepa'].get('buy_box') or result['keepa'].get('avg_new_90d')
     if sell_price and cost_paid:
         fees = sell_price * 0.15
         shipping = 4.00
@@ -234,6 +244,14 @@ def scan():
             'net_profit': round(net, 2),
             'roi_pct': round((net / float(cost_paid)) * 100, 1) if cost_paid else None
         }
+
+    # AI verdict from Linkup research (always, even without barcode)
+    product_name = result['identification'].get('name', search_query)
+    linkup_answer = result['linkup'].get('answer', '')
+    if linkup_answer:
+        ai_verdict = analyze_verdict(product_name, linkup_answer, cost_paid)
+        if ai_verdict:
+            result['verdict'] = ai_verdict
 
     return jsonify(result)
 
