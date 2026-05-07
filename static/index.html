@@ -12,30 +12,40 @@
   .container { max-width: 480px; margin: 0 auto; padding: 20px; }
   h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 4px; }
   .subtitle { font-size: 15px; color: #666; margin-bottom: 24px; }
+
   .scan-area { background: #1a1a1a; border: 2px dashed #333; border-radius: 16px; padding: 36px 20px; text-align: center; margin-bottom: 20px; cursor: pointer; }
   .scan-icon { font-size: 52px; margin-bottom: 10px; }
   .scan-label { font-size: 18px; color: #aaa; margin-bottom: 4px; }
   .scan-sub { font-size: 14px; color: #555; }
   #fileInput { display: none; }
+
   .cost-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .cost-row label { font-size: 17px; color: #aaa; white-space: nowrap; }
   .cost-row input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 20px; outline: none; }
+
   .scan-btn { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 18px; font-size: 19px; font-weight: 600; cursor: pointer; }
   .scan-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
   .status { text-align: center; padding: 28px; color: #aaa; font-size: 17px; display: none; }
   .spinner { display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
   .results { display: none; }
+
+  /* Verdict — big and obvious */
   .verdict { text-align: center; padding: 22px 20px 18px; border-radius: 14px; margin-bottom: 16px; }
   .verdict .v-label { font-size: 36px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; }
   .verdict .v-reason { font-size: 16px; line-height: 1.5; opacity: 0.85; }
   .verdict.buy { background: #14532d; color: #22c55e; }
   .verdict.pass { background: #450a0a; color: #ef4444; }
   .verdict.maybe { background: #422006; color: #eab308; }
+
   .card { background: #1a1a1a; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
   .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 14px; }
+
   .item-name { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3; }
   .item-brand { font-size: 16px; color: #888; }
+
   .price-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
   .price-row:last-child { border-bottom: none; }
   .price-label { font-size: 16px; color: #999; }
@@ -44,8 +54,16 @@
   .price-val.green { color: #22c55e; }
   .price-val.red { color: #ef4444; }
   .price-val.yellow { color: #eab308; }
+
   .source-row { margin-top: 12px; }
   .source-link { display: inline-block; font-size: 13px; color: #2563eb; text-decoration: none; margin-right: 12px; margin-top: 4px; }
+  .listing-links { margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a2a2a; }
+  .listing-links-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 10px; }
+  .listing-btn { display: inline-block; padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin-right: 8px; margin-bottom: 8px; }
+  .listing-btn.ebay-sold { background: #1a2a1a; color: #22c55e; border: 1px solid #22c55e44; }
+  .listing-btn.ebay-live { background: #1a1a2a; color: #60a5fa; border: 1px solid #60a5fa44; }
+  .listing-btn.amazon { background: #2a2010; color: #fb923c; border: 1px solid #fb923c44; }
+
   .preview-img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 14px; display: none; }
   .reset-btn { width: 100%; background: #1a1a1a; color: #888; border: 1px solid #333; border-radius: 12px; padding: 14px; font-size: 16px; cursor: pointer; margin-top: 6px; }
 </style>
@@ -54,52 +72,255 @@
 <div class="container">
   <h1>&#128230; Reseller Scanner</h1>
   <p class="subtitle">Scan any item to check resale value</p>
+
   <div class="scan-area" onclick="document.getElementById('fileInput').click()">
     <div class="scan-icon">&#128247;</div>
     <div class="scan-label">Tap to scan item</div>
     <div class="scan-sub">Photo &middot; auto barcode &middot; price check</div>
     <input type="file" id="fileInput" accept="image/*" capture="environment">
   </div>
+
   <img id="previewImg" class="preview-img" alt="">
+
   <div class="cost-row">
     <label>I paid $</label>
     <input type="number" id="costInput" placeholder="0.00" step="0.01" min="0">
   </div>
+
   <button class="scan-btn" id="scanBtn" onclick="doScan()" disabled>Select an item first</button>
-  <div class="status" id="status"><span class="spinner"></span><span id="statusText">Scanning...</span></div>
+
+  <div class="status" id="status">
+    <span class="spinner"></span>
+    <span id="statusText">Scanning...</span>
+  </div>
+
   <div class="results" id="results">
+
+    <!-- Item name -->
     <div class="card">
       <div class="card-title">Item Identified</div>
-      <div class="item-name" id="itemName">-</div>
+      <div class="item-name" id="itemName">—</div>
       <div class="item-brand" id="itemBrand"></div>
     </div>
+
+    <!-- Verdict — always shown -->
     <div class="verdict" id="verdictBox" style="display:none">
       <div class="v-label" id="verdictLabel"></div>
       <div class="v-reason" id="verdictReason"></div>
     </div>
+
+    <!-- Key prices -->
     <div class="card" id="pricesCard" style="display:none">
       <div class="card-title">Prices</div>
       <div id="priceRows"></div>
       <div class="source-row" id="sourcesRow"></div>
+      <div class="listing-links" id="listingLinks" style="display:none">
+        <div class="listing-links-label">Live Listings</div>
+        <div id="listingBtns"></div>
+      </div>
     </div>
+
+    <!-- Margin (barcode scans only) -->
     <div class="card" id="marginCard" style="display:none">
       <div class="card-title">Margin (Amazon data)</div>
       <div id="marginRows"></div>
     </div>
+
     <button class="reset-btn" onclick="reset()">&#128260; Scan another item</button>
   </div>
 </div>
+
 <script>
-var imageB64='',detectedUPC='';
-function compressToJpeg(img){try{var max=900,w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);var r=c.toDataURL('image/jpeg',0.75);return(r&&r.length>100)?r:null;}catch(e){return null;}}
-document.getElementById('fileInput').addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;imageB64='';detectedUPC='';document.getElementById('scanBtn').disabled=true;document.getElementById('scanBtn').textContent='Reading photo...';var reader=new FileReader();reader.onerror=function(){document.getElementById('scanBtn').textContent='Could not read. Try again.';};reader.onload=function(ev){var dataUrl=ev.target.result;var prev=document.getElementById('previewImg');prev.src=dataUrl;prev.style.display='block';tryBarcodeDetect(dataUrl);var img=new Image();img.onerror=function(){if(dataUrl.length<5000000){imageB64=dataUrl;ready();}else{document.getElementById('scanBtn').textContent='Photo too large. Try again.';}};img.onload=function(){imageB64=compressToJpeg(img)||dataUrl;ready();};img.src=dataUrl;};reader.readAsDataURL(file);});
-function ready(){document.getElementById('scanBtn').disabled=false;if(!detectedUPC)document.getElementById('scanBtn').textContent='Check Resale Value';}
-function tryBarcodeDetect(dataUrl){try{Quagga.decodeSingle({decoder:{readers:['ean_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true,src:dataUrl},function(result){if(result&&result.codeResult){detectedUPC=result.codeResult.code;document.getElementById('scanBtn').textContent='Barcode found - Check Value';}});}catch(e){}}
-function doScan(){if(!imageB64)return;var cost=parseFloat(document.getElementById('costInput').value)||0;document.getElementById('scanBtn').disabled=true;document.getElementById('results').style.display='none';document.getElementById('status').style.display='block';document.getElementById('statusText').textContent='Identifying item...';var steps=['Identifying item...','Researching prices...','Generating verdict...'],si=0;var iv=setInterval(function(){si++;if(si<steps.length)document.getElementById('statusText').textContent=steps[si];},3500);fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:imageB64,upc:detectedUPC,cost_paid:cost})}).then(function(resp){return resp.text().then(function(txt){clearInterval(iv);document.getElementById('status').style.display='none';try{showResults(JSON.parse(txt),cost);}catch(e){document.getElementById('statusText').textContent='Server error. Try again.';document.getElementById('status').style.display='block';document.getElementById('scanBtn').disabled=false;}});}).catch(function(){clearInterval(iv);document.getElementById('status').style.display='none';document.getElementById('statusText').textContent='Connection error. Try again.';document.getElementById('status').style.display='block';document.getElementById('scanBtn').disabled=false;});}
-function showResults(data,cost){document.getElementById('results').style.display='block';var ident=data.identification||{};document.getElementById('itemName').textContent=ident.name||'Unknown item';document.getElementById('itemBrand').textContent=ident.brand||'';var v=data.verdict||{},keepa=data.keepa||{},margin=data.margin||{},vbox=document.getElementById('verdictBox'),vlabel=document.getElementById('verdictLabel'),vreason=document.getElementById('verdictReason');if(margin.net_profit!==undefined){var net=margin.net_profit;vbox.style.display='block';if(net>10){vbox.className='verdict buy';vlabel.textContent='BUY';}else if(net>0){vbox.className='verdict maybe';vlabel.textContent='MAYBE';}else{vbox.className='verdict pass';vlabel.textContent='PASS';}vreason.textContent='$'+net+' profit after fees & shipping'+(margin.roi_pct?' ('+margin.roi_pct+'% ROI)':'');}else if(v.verdict){vbox.style.display='block';if(v.verdict==='BUY'){vbox.className='verdict buy';vlabel.textContent='BUY';}else if(v.verdict==='MAYBE'){vbox.className='verdict maybe';vlabel.textContent='MAYBE';}else{vbox.className='verdict pass';vlabel.textContent='PASS';}vreason.textContent=v.reason||'';}var rows=[];if(v.retail&&v.retail!=='unknown')rows.push(['Retail (new)',v.retail,'white']);if(v.resale&&v.resale!=='no market')rows.push(['Resale / eBay',v.resale,'green']);if(keepa.buy_box)rows.push(['Amazon Buy Box','$'+keepa.buy_box,'white']);if(keepa.avg_new_90d)rows.push(['Amazon Avg (90d)','$'+keepa.avg_new_90d,'white']);var linkup=data.linkup||{};if(rows.length>0||(linkup.sources&&linkup.sources.length)){document.getElementById('pricesCard').style.display='block';document.getElementById('priceRows').innerHTML=rows.map(function(r){return '<div class="price-row"><span class="price-label">'+r[0]+'</span><span class="price-val '+r[2]+'">'+r[1]+'</span></div>';}).join('');if(linkup.sources&&linkup.sources.length){document.getElementById('sourcesRow').innerHTML=linkup.sources.map(function(s){return '<a class="source-link" href="'+s.url+'" target="_blank">'+(s.name||'Source')+'</a>';}).join('');}}if(margin.sell_price){document.getElementById('marginCard').style.display='block';var net2=margin.net_profit,nc=net2>5?'green':net2>0?'yellow':'red';document.getElementById('marginRows').innerHTML=row('Sell price','$'+margin.sell_price,'white')+row('Est. fees (15%)','-$'+margin.estimated_fees,'red')+row('Est. shipping','-$'+margin.estimated_shipping,'red')+row('Your cost','-$'+margin.cost_paid,'red')+row('Net profit','$'+net2,nc);}document.getElementById('scanBtn').disabled=false;document.getElementById('scanBtn').textContent='Scan Again';}
-function row(label,val,cls){return '<div class="price-row"><span class="price-label">'+label+'</span><span class="price-val '+cls+'">'+val+'</span></div>';}
-function reset(){imageB64='';detectedUPC='';document.getElementById('previewImg').style.display='none';document.getElementById('previewImg').src='';document.getElementById('fileInput').value='';document.getElementById('results').style.display='none';document.getElementById('status').style.display='none';document.getElementById('scanBtn').disabled=true;document.getElementById('scanBtn').textContent='Select an item first';document.getElementById('costInput').value='';['verdictBox','pricesCard','marginCard'].forEach(function(id){document.getElementById(id).style.display='none';});}
-if('serviceWorker'in navigator){navigator.serviceWorker.register('/static/sw.js').catch(function(){});}
+var imageB64 = '';
+var detectedUPC = '';
+
+function compressToJpeg(img) {
+  try {
+    var max = 900, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    if (!w || !h) return null;
+    if (w > max || h > max) { if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    var r = c.toDataURL('image/jpeg', 0.75);
+    return (r && r.length > 100) ? r : null;
+  } catch(e) { return null; }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0]; if (!file) return;
+  imageB64 = ''; detectedUPC = '';
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('scanBtn').textContent = 'Reading photo...';
+  var reader = new FileReader();
+  reader.onerror = function() { document.getElementById('scanBtn').textContent = 'Could not read. Try again.'; };
+  reader.onload = function(ev) {
+    var dataUrl = ev.target.result;
+    var prev = document.getElementById('previewImg'); prev.src = dataUrl; prev.style.display = 'block';
+    tryBarcodeDetect(dataUrl);
+    var img = new Image();
+    img.onerror = function() {
+      if (dataUrl.length < 5000000) { imageB64 = dataUrl; ready(); }
+      else { document.getElementById('scanBtn').textContent = 'Photo too large. Try again.'; }
+    };
+    img.onload = function() { imageB64 = compressToJpeg(img) || dataUrl; ready(); };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+});
+
+function ready() {
+  document.getElementById('scanBtn').disabled = false;
+  if (!detectedUPC) document.getElementById('scanBtn').textContent = 'Check Resale Value';
+}
+
+function tryBarcodeDetect(dataUrl) {
+  try {
+    Quagga.decodeSingle({
+      decoder: { readers: ['ean_reader','upc_reader','upc_e_reader','code_128_reader'] },
+      locate: true, src: dataUrl
+    }, function(result) {
+      if (result && result.codeResult) {
+        detectedUPC = result.codeResult.code;
+        document.getElementById('scanBtn').textContent = 'Barcode found – Check Value';
+      }
+    });
+  } catch(e) {}
+}
+
+function doScan() {
+  if (!imageB64) return;
+  var cost = parseFloat(document.getElementById('costInput').value) || 0;
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('status').style.display = 'block';
+  document.getElementById('statusText').textContent = 'Identifying item...';
+  var steps = ['Identifying item...', 'Researching prices...', 'Generating verdict...'];
+  var si = 0;
+  var iv = setInterval(function() { si++; if (si < steps.length) document.getElementById('statusText').textContent = steps[si]; }, 3500);
+
+  fetch('/scan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: imageB64, upc: detectedUPC, cost_paid: cost })
+  }).then(function(resp) {
+    return resp.text().then(function(txt) {
+      clearInterval(iv);
+      document.getElementById('status').style.display = 'none';
+      try { showResults(JSON.parse(txt), cost); }
+      catch(e) {
+        document.getElementById('statusText').textContent = 'Server error. Try again.';
+        document.getElementById('status').style.display = 'block';
+        document.getElementById('scanBtn').disabled = false;
+      }
+    });
+  }).catch(function() {
+    clearInterval(iv);
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('statusText').textContent = 'Connection error. Try again.';
+    document.getElementById('status').style.display = 'block';
+    document.getElementById('scanBtn').disabled = false;
+  });
+}
+
+function showResults(data, cost) {
+  document.getElementById('results').style.display = 'block';
+
+  // Item name
+  var ident = data.identification || {};
+  document.getElementById('itemName').textContent = ident.name || 'Unknown item';
+  document.getElementById('itemBrand').textContent = ident.brand || '';
+
+  // Verdict card (from AI analysis)
+  var v = data.verdict || {};
+  var keepa = data.keepa || {};
+  var margin = data.margin || {};
+
+  var vbox = document.getElementById('verdictBox');
+  var vlabel = document.getElementById('verdictLabel');
+  var vreason = document.getElementById('verdictReason');
+
+  // Use margin data for verdict if we have it, otherwise use AI verdict
+  if (margin.net_profit !== undefined) {
+    var net = margin.net_profit;
+    vbox.style.display = 'block';
+    if (net > 10) { vbox.className = 'verdict buy'; vlabel.textContent = 'BUY'; }
+    else if (net > 0) { vbox.className = 'verdict maybe'; vlabel.textContent = 'MAYBE'; }
+    else { vbox.className = 'verdict pass'; vlabel.textContent = 'PASS'; }
+    vreason.textContent = '$' + net + ' profit after fees & shipping' + (margin.roi_pct ? ' (' + margin.roi_pct + '% ROI)' : '');
+  } else if (v.verdict) {
+    vbox.style.display = 'block';
+    if (v.verdict === 'BUY') { vbox.className = 'verdict buy'; vlabel.textContent = 'BUY'; }
+    else if (v.verdict === 'MAYBE') { vbox.className = 'verdict maybe'; vlabel.textContent = 'MAYBE'; }
+    else { vbox.className = 'verdict pass'; vlabel.textContent = 'PASS'; }
+    vreason.textContent = v.reason || '';
+  }
+
+  // Prices card
+  var rows = [];
+  if (v.retail && v.retail !== 'unknown') rows.push(['Retail (new)', v.retail, 'white']);
+  if (v.resale && v.resale !== 'no market') rows.push(['Resale / eBay', v.resale, 'green']);
+  if (keepa.buy_box) rows.push(['Amazon Buy Box', '$' + keepa.buy_box, 'white']);
+  if (keepa.avg_new_90d) rows.push(['Amazon Avg (90d)', '$' + keepa.avg_new_90d, 'white']);
+
+  var linkup = data.linkup || {};
+  if (rows.length > 0 || (linkup.sources && linkup.sources.length)) {
+    document.getElementById('pricesCard').style.display = 'block';
+    document.getElementById('priceRows').innerHTML = rows.map(function(r) {
+      return '<div class="price-row"><span class="price-label">' + r[0] + '</span><span class="price-val ' + r[2] + '">' + r[1] + '</span></div>';
+    }).join('');
+    if (linkup.sources && linkup.sources.length) {
+      document.getElementById('sourcesRow').innerHTML = linkup.sources.map(function(s) {
+        return '<a class="source-link" href="' + s.url + '" target="_blank">' + (s.name || 'Source') + '</a>';
+      }).join('');
+    }
+  }
+
+  // Live listing links
+  var searchTerm = ident.search_query || ident.name || '';
+  if (searchTerm) {
+    var q = encodeURIComponent(searchTerm);
+    document.getElementById('listingLinks').style.display = 'block';
+    document.getElementById('listingBtns').innerHTML =
+      '<a class="listing-btn ebay-sold" href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&LH_Sold=1&LH_Complete=1&_sop=13" target="_blank">eBay Sold ✓</a>' +
+      '<a class="listing-btn ebay-live" href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&_sop=10" target="_blank">eBay Active</a>' +
+      '<a class="listing-btn amazon" href="https://www.amazon.com/s?k=' + q + '" target="_blank">Amazon</a>';
+  }
+
+  // Margin detail (if we have Keepa data)
+  if (margin.sell_price) {
+    document.getElementById('marginCard').style.display = 'block';
+    var net2 = margin.net_profit;
+    var nc = net2 > 5 ? 'green' : net2 > 0 ? 'yellow' : 'red';
+    document.getElementById('marginRows').innerHTML =
+      row('Sell price', '$' + margin.sell_price, 'white') +
+      row('Est. fees (15%)', '-$' + margin.estimated_fees, 'red') +
+      row('Est. shipping', '-$' + margin.estimated_shipping, 'red') +
+      row('Your cost', '-$' + margin.cost_paid, 'red') +
+      row('Net profit', '$' + net2, nc);
+  }
+
+  document.getElementById('scanBtn').disabled = false;
+  document.getElementById('scanBtn').textContent = 'Scan Again';
+}
+
+function row(label, val, cls) {
+  return '<div class="price-row"><span class="price-label">' + label + '</span><span class="price-val ' + cls + '">' + val + '</span></div>';
+}
+
+function reset() {
+  imageB64 = ''; detectedUPC = '';
+  document.getElementById('previewImg').style.display = 'none';
+  document.getElementById('previewImg').src = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('scanBtn').textContent = 'Select an item first';
+  document.getElementById('costInput').value = '';
+  ['verdictBox','pricesCard','marginCard','listingLinks'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
+}
+
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js').catch(function(){}); }
 </script>
 </body>
 </html>
