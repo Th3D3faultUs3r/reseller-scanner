@@ -32,7 +32,7 @@
 
   .results { display: none; }
 
-  /* Verdict â big and obvious */
+  /* Verdict Ã¢ÂÂ big and obvious */
   .verdict { text-align: center; padding: 22px 20px 18px; border-radius: 14px; margin-bottom: 16px; }
   .verdict .v-label { font-size: 36px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; }
   .verdict .v-reason { font-size: 16px; line-height: 1.5; opacity: 0.85; }
@@ -99,11 +99,11 @@
     <!-- Item name -->
     <div class="card">
       <div class="card-title">Item Identified</div>
-      <div class="item-name" id="itemName">â</div>
+      <div class="item-name" id="itemName">Ã¢ÂÂ</div>
       <div class="item-brand" id="itemBrand"></div>
     </div>
 
-    <!-- Verdict â always shown -->
+    <!-- Verdict Ã¢ÂÂ always shown -->
     <div class="verdict" id="verdictBox" style="display:none">
       <div class="v-label" id="verdictLabel"></div>
       <div class="v-reason" id="verdictReason"></div>
@@ -181,7 +181,7 @@ function tryBarcodeDetect(dataUrl) {
     }, function(result) {
       if (result && result.codeResult) {
         detectedUPC = result.codeResult.code;
-        document.getElementById('scanBtn').textContent = 'Barcode found â Check Value';
+        document.getElementById('scanBtn').textContent = 'Barcode found Ã¢ÂÂ Check Value';
       }
     });
   } catch(e) {}
@@ -281,9 +281,9 @@ function showResults(data, cost) {
     var q = encodeURIComponent(searchTerm);
     document.getElementById('listingLinks').style.display = 'block';
     document.getElementById('listingBtns').innerHTML =
-      '<a href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&LH_Sold=1&LH_Complete=1&_sop=13" target="_blank" class="listing-btn ebay-sold">eBay Sold ✓</a>' +
-      '<a class="listing-btn ebay-live" href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&_sop=10" target="_blank">eBay Active</a>' +
-      '<a class="listing-btn amazon" href="https://www.amazon.com/s?k=' + q + '" target="_blank">Amazon</a>';
+      '<a href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&LH_Sold=1&LH_Complete=1&_sop=13" target="_blank" rel="noreferrer noopener" class="listing-btn ebay-sold">eBay Sold â</a>' +
+      '<a class="listing-btn ebay-live" href="https://www.ebay.com/sch/i.html?_nkw=' + q + '&_sop=10" target="_blank" rel="noreferrer noopener">eBay Active</a>' +
+      '<a class="listing-btn amazon" href="https://www.amazon.com/s?k=' + q + '" target="_blank" rel="noreferrer noopener">Amazon</a>';
   }
 
   // Margin detail (if we have Keepa data)
