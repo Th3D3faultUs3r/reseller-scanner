@@ -6,6 +6,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import time
+_cache = {}  # key: normalized query, value: (timestamp, result)
+CACHE_TTL = 1800  # 30 minutes
+
+def get_cached(query):
+    key = query.lower().strip()
+    if key in _cache:
+        ts, result = _cache[key]
+        if time.time() - ts < CACHE_TTL:
+            return result
+    return None
+
+def set_cached(query, result):
+    key = query.lower().strip()
+    _cache[key] = (time.time(), result)
+
+
 app = Flask(__name__, static_folder='static')
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 client = Anthropic()
@@ -43,6 +60,7 @@ def identify_with_claude(image_b64):
         response = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=300,
+            temperature=0,
             messages=[{
                 'role': 'user',
                 'content': [
@@ -168,6 +186,7 @@ REASON: [one sentence - why buy or pass, mention profit potential if known]'''
         response = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=150,
+            temperature=0,
             messages=[{'role': 'user', 'content': prompt}]
         )
         text = response.content[0].text.strip()
@@ -228,9 +247,15 @@ def scan():
     else:
         result['keepa'] = {'configured': bool(KEEPA_API_KEY), 'found': False}
 
-    result['linkup'] = get_linkup_data(search_query)
+    # Check cache for Linkup + verdict (keyed on normalized search_query)
+    cached = get_cached(search_query) if search_query else None
+    if cached:
+        result['linkup'] = cached['linkup']
+        result['verdict'] = cached['verdict']
+    else:
+        result['linkup'] = get_linkup_data(search_query)
 
-    # Margin from Keepa if available
+    # Margin from Keepa if available (always computed fresh — cost_paid may differ)
     sell_price = result['keepa'].get('buy_box') or result['keepa'].get('avg_new_90d')
     if sell_price and cost_paid:
         fees = sell_price * 0.15
@@ -246,12 +271,16 @@ def scan():
         }
 
     # AI verdict from Linkup research (always, even without barcode)
-    product_name = result['identification'].get('name', search_query)
-    linkup_answer = result['linkup'].get('answer', '')
-    if linkup_answer:
-        ai_verdict = analyze_verdict(product_name, linkup_answer, cost_paid)
-        if ai_verdict:
-            result['verdict'] = ai_verdict
+    if not cached:
+        product_name = result['identification'].get('name', search_query)
+        linkup_answer = result['linkup'].get('answer', '')
+        if linkup_answer:
+            ai_verdict = analyze_verdict(product_name, linkup_answer, cost_paid)
+            if ai_verdict:
+                result['verdict'] = ai_verdict
+        # Store linkup + verdict in cache for future identical queries
+        if search_query:
+            set_cached(search_query, {'linkup': result['linkup'], 'verdict': result['verdict']})
 
     return jsonify(result)
 
